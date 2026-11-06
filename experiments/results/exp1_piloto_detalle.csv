@@ -1,0 +1,17 @@
+url,etiqueta,fuente,A,A_mismo_dia,B,C,puntaje_B,puntaje_C,estado_C,razones_C,ms_B,ms_C,error_sandbox,titulo,url_final
+https://instagram.tms.valentinrnld.com/,maliciosa,openphish,0,1,1,1,35,35,sospechoso,marca_en_dominio_ajeno,1919,6055,,,
+http://www.coinnbase.vercel.app/,maliciosa,openphish,0,1,1,1,60,60,sospechoso,typosquatting_marca;sin_https,1173,5869,,,
+https://nfacebook.vn/sDgmj7JNDDr?d6r&7aK,maliciosa,openphish,0,1,1,1,45,60,sospechoso,typosquatting_marca;formulario_password,1418,13235,,Full tài liệu chữa Đề thi thử HSA & V-ACT Lần 2 ✅Đề ✅Lời giải ✅Video chữa,https://nfacebook.vn/sDgmj7JNDDr?d6r&7aK
+http://ckvptc.com/,maliciosa,openphish,0,1,1,1,55,70,peligroso,dominio_muy_nuevo;marca_en_pagina_ajena,832,7668,,Amazon Refund Check,https://ckvptc.com/
+http://imjj-0k7yoh-r7qnfi-p3ou6q.pages.dev/,maliciosa,openphish,0,1,0,0,15,0,sin_alertas,,867,5610,,Suspected Phishing | Cloudflare,https://imjj-0k7yoh-r7qnfi-p3ou6q.pages.dev/
+https://www.myfidelitysite.com/roper4,maliciosa,openphish,0,1,0,0,0,0,sin_alertas,,1398,7639,,,
+http://nltay-6df-9snd-l6znz-08-09-2026-hh.pages.dev/,maliciosa,openphish,0,1,0,0,15,0,sin_alertas,,762,8124,,Suspected Malware | Cloudflare,https://nltay-6df-9snd-l6znz-08-09-2026-hh.pages.dev/
+https://melqavi-mpt-zunfelo-p2h8ka54.pages.dev/,maliciosa,openphish,0,1,0,0,10,10,sin_alertas,certificado_reciente,957,11390,,Suspected Malware | Cloudflare,https://melqavi-mpt-zunfelo-p2h8ka54.pages.dev/
+https://www.bancoestado.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,200,4645,,,https://www.bancoestado.cl/
+https://www.bancochile.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,193,8282,,Accede a los mejores beneficios y productos con Banco de Chile,https://sitiospublicos.bancochile.cl/personas
+https://www.santander.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,180,4930,,Internet Connection Error,https://banco.santander.cl/
+https://www.bci.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,1110,12614,,Bci Personas | Banco Bci,https://www.bci.cl/personas
+https://www.scotiabankchile.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,196,11856,,"Scotiabank | Hazte Cliente, acumula y canjea tus ScotiaPesos donde quieras",https://www.scotiabankchile.cl/
+https://www.itau.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,181,4834,,,https://www.itau.cl/
+https://www.bancofalabella.cl/,benigna,chilenos,0,0,0,0,0,0,sin_alertas,,461,10317,,Banco Falabella | Banco Digital,https://www.bancofalabella.cl/
+https://www.bancoripley.cl/,benigna,chilenos,0,0,0,0,0,20,sin_alertas,permiso_sensible,196,12186,,"Banco Ripley en Línea - Tarjetas, Cuentas, Créditos Online",https://www.bancoripley.cl/

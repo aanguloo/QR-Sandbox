@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>Disco</title><h1>Disco</h1>
+<script>
+
+// Intenta llenar el disco del navegador (IndexedDB) con 1 GB.
+const req = indexedDB.open('relleno', 1);
+req.onupgradeneeded = () => req.result.createObjectStore('b');
+req.onsuccess = () => { const db = req.result; let mb = 0;
+  function escribir() { if (mb >= 1024) return; const tx = db.transaction('b', 'readwrite'); tx.objectStore('b').put(new Uint8Array(8 * 1024 * 1024).fill(7), mb);
+    tx.oncomplete = () => { mb += 8; document.title = 'Disco ' + mb + ' MB'; escribir(); }; tx.onerror = () => { document.title = 'Disco lleno en ' + mb + ' MB'; }; }
+  escribir(); };
+</script>

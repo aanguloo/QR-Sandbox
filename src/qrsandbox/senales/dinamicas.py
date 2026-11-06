@@ -8,7 +8,8 @@ expresiones regulares acotadas; nunca se ejecutan ni se insertan como HTML.
 import re
 
 from qrsandbox.comun.esquemas import ResultadoAnalisis
-from qrsandbox.senales.dominio import Marca, cargar_marcas, partes_host
+from qrsandbox.senales.dominio import Marca, cargar_marcas, es_rastreador, partes_host
+from qrsandbox.senales.estaticas import hallazgo_rastreador
 from qrsandbox.senales.hallazgos import Hallazgo
 
 # "Continuar con Google", "Sign in with Apple"...: botones de inicio de sesión social, muy
@@ -70,6 +71,13 @@ def senales_dinamicas(
         h.append(Hallazgo("muchas_redirecciones", f"Pasa por {saltos} redirecciones antes de "
                           "llegar al destino.", f"pasa por {saltos} redirecciones"))
 
+    # Un IP logger suele esconderse detrás de un acortador: se revisa cada salto.
+    for salto in r.cadena_redirecciones:
+        p = partes_host(salto)
+        if es_rastreador(p):
+            h.append(hallazgo_rastreador(p.host))
+            break
+
     inicial = partes_host(r.url_inicial)
     final = partes_host(r.url_final) if r.url_final else inicial
     if r.url_final and final.registrable != inicial.registrable and final.host != inicial.host:
@@ -113,6 +121,15 @@ def senales_dinamicas(
         else:
             h.append(Hallazgo("formulario_password", "La página tiene un formulario que pide "
                               "contraseña.", "pide una contraseña"))
+
+    if r.permisos:
+        nombres = {"geolocalizacion": "tu ubicación", "camara": "la cámara",
+                   "microfono": "el micrófono", "notificaciones": "enviarte notificaciones"}
+        pedidos = [nombres[x] for x in r.permisos]
+        lista = ", ".join(pedidos[:-1]) + (" y " if len(pedidos) > 1 else "") + pedidos[-1]
+        h.append(Hallazgo("permiso_sensible", f"La página pidió acceso a {lista} (el sandbox se "
+                          "lo negó). Un sitio que acabas de abrir desde un QR rara vez lo necesita.",
+                          f"pide acceso a {lista}"))
 
     descargas = [e for e in analisis.eventos if e.get("tipo") == "descarga_bloqueada"]
     if descargas:

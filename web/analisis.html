@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4fd1">
+  <title>Resultado del análisis · QR-Sandbox</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/img/icono-192.png">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="module" src="/static/js/analisis.js"></script>
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">QR<span>·</span>Sandbox</a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/">Escanear</a>
+      <a href="/comercio">Comercio</a>
+      <a href="/log">Log</a>
+      <a href="/ayuda">Ayuda</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Análisis del enlace</h1>
+    <p class="bajada"><code id="url-analizada"></code></p>
+
+    <section class="tarjeta veredicto oculto" id="veredicto" aria-live="polite"></section>
+    <section class="tarjeta oculto" id="log"></section>
+
+    <section class="tarjeta pila">
+      <h2 id="titulo-vivo"><span class="punto" id="punto-vivo" aria-hidden="true"></span>Qué está haciendo el link</h2>
+      <details class="explicacion">
+        <summary>¿Qué estoy viendo?</summary>
+        <p>Abrimos el enlace por ti en un navegador aislado en nuestro servidor, que se destruye al terminar. La pantalla muestra lo que ese navegador ve: a tu teléfono solo llegan imágenes, nada de esa página se ejecuta aquí.</p>
+        <p>La lista explica lo que va pasando: 🔀 salta a otra dirección (redirección), 🌐 llegó a un sitio, 📡 contacta otros servidores (publicidad, rastreo), 📍📷 pidió permisos, ⚠️ algo sospechoso.</p>
+      </details>
+      <div class="en-vivo">
+        <img class="pantalla" id="pantalla" alt="Vista del navegador aislado (solo imágenes)">
+        <ul class="linea" id="linea" aria-live="polite"></ul>
+      </div>
+    </section>
+
+    <section class="tarjeta pila oculto" id="seccion-fotos">
+      <h2>Paso a paso</h2>
+      <p class="pequeno">Momentos clave de lo que vio el navegador aislado. Toca una foto para agrandarla.</p>
+      <div class="fotos" id="fotos"></div>
+      <figure class="foto-ampliada oculto" id="foto-ampliada"></figure>
+    </section>
+
+    <section class="tarjeta oculto pila" id="detalles"></section>
+    <section class="tarjeta oculto pila" id="abrir"></section>
+  </main>
+</body>
+</html>

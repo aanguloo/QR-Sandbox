@@ -1,0 +1,4 @@
+perfil,repeticiones,arranque_ms_p50,arranque_ms_p95,arranque_ms_min
+basico,10,367,388,347
+endurecido,10,370,401,333
+gvisor,10,366,386,342

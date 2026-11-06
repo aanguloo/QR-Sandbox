@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4fd1">
+  <title>Escanear · QR-Sandbox</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/img/icono-192.png">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/vendor/jsQR.js" defer></script>
+  <script type="module" src="/static/js/escanear.js"></script>
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">QR<span>·</span>Sandbox</a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/" aria-current="page">Escanear</a>
+      <a href="/comercio">Comercio</a>
+      <a href="/log">Log</a>
+      <a href="/ayuda">Ayuda</a>
+    </nav>
+  </header>
+  <main>
+    <h1>¿Es seguro este QR?</h1>
+    <p class="bajada">Lo abrimos por ti en un navegador aislado y te mostramos qué hace, sin que tu teléfono toque el enlace.</p>
+    <ol class="pasos tarjeta">
+      <li><strong>Escanea</strong> el QR con la cámara, sube una foto o pega el enlace.</li>
+      <li><strong>Revisa</strong> a dónde lleva: todavía no se abre nada.</li>
+      <li><strong>Analízalo</strong>: lo abrimos en un navegador aislado y te decimos si es seguro y por qué.</li>
+    </ol>
+    <p class="pequeno">¿Primera vez? <a href="/ayuda">Mira la guía de uso</a>.</p>
+
+    <section class="tarjeta pila" id="seccion-escaneo">
+      <div class="visor oculto" id="visor">
+        <video id="video" playsinline muted></video>
+        <div class="marco" aria-hidden="true"></div>
+      </div>
+      <canvas id="lienzo" class="oculto"></canvas>
+      <div class="fila">
+        <button class="primario" id="boton-camara" type="button">Usar la cámara</button>
+        <label class="boton" for="archivo">Subir una imagen</label>
+        <input class="oculto" id="archivo" type="file" accept="image/*">
+        <button id="boton-detener" class="oculto" type="button">Detener cámara</button>
+      </div>
+      <p class="pequeno">¿El QR llegó por correo o en un PDF? Sube una captura de pantalla. También puedes pegar un enlace:</p>
+      <form id="form-manual" class="fila">
+        <input id="manual" type="text" inputmode="url" autocomplete="off" placeholder="https://…" aria-label="Enlace a analizar">
+        <button type="submit">Usar enlace</button>
+      </form>
+      <div id="mensaje-escaneo" aria-live="polite"></div>
+    </section>
+
+    <section class="tarjeta pila oculto" id="seccion-destino" aria-live="polite">
+      <h2>El QR lleva a</h2>
+      <div class="destino">
+        <div class="host" id="destino-host"></div>
+        <code id="destino-url"></code>
+      </div>
+      <p class="pequeno">Todavía no abrimos nada. Nunca te redirigimos automáticamente.</p>
+      <label class="casilla"><input type="checkbox" id="usar-ubicacion" checked>
+        <span>Usar mi ubicación aproximada (~100 m) para comprobar si el comercio registró este QR. No se guarda.</span></label>
+      <div class="fila">
+        <button class="primario" id="boton-analizar" type="button">Analizar en el sandbox</button>
+        <button id="boton-otro" type="button">Escanear otro</button>
+      </div>
+      <div id="mensaje-analisis" aria-live="polite"></div>
+    </section>
+  </main>
+</body>
+</html>

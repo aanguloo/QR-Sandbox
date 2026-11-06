@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Hilos</title><h1>Hilos</h1>
+<script>
+
+// Crea cientos de Web Workers (hilos del sistema) para probar el límite de procesos/hilos.
+const codigo = URL.createObjectURL(new Blob(['let x=0; for(;;){x++}'], {type: 'text/javascript'}));
+let n = 0; function crear() { for (let i = 0; i < 50 && n < 1000; i++) { try { new Worker(codigo); n++; } catch (e) {} } document.title = 'Hilos ' + n; if (n < 1000) setTimeout(crear, 50); }
+crear();
+</script>

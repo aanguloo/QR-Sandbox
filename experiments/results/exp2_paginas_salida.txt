@@ -1,0 +1,30 @@
+[páginas]     basico        ssrf:   3594 ms, timeout=False, bloqueos proxy=21, título «Bloqueado por QR-Sandbox», eliminado=True
+[páginas]     basico     memoria:   6677 ms, timeout=False, bloqueos proxy=0, título «Memoria 1600 MB», eliminado=True
+[páginas]     basico         cpu:  17898 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas]     basico       hilos:  20671 ms, timeout=True, bloqueos proxy=0, título «», eliminado=True
+[páginas]     basico       disco:   3010 ms, timeout=False, bloqueos proxy=0, título «Disco 512 MB», eliminado=True
+[páginas]     basico  bucle_http:   2799 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas]     basico    bucle_js:   2798 ms, timeout=False, bloqueos proxy=0, título «Bucle JS», eliminado=True
+[páginas]     basico    descarga:   2779 ms, timeout=False, bloqueos proxy=0, título «Descarga», eliminado=True
+[páginas]     basico    permisos:   2800 ms, timeout=False, bloqueos proxy=0, título «Permisos», eliminado=True
+[páginas]     basico  inundacion:  14893 ms, timeout=False, bloqueos proxy=157, título «Inundacion», eliminado=True
+[páginas] endurecido        ssrf:   6733 ms, timeout=False, bloqueos proxy=30, título «Bloqueado por QR-Sandbox», eliminado=True
+[páginas] endurecido     memoria:   1701 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas] endurecido         cpu:  17785 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas] endurecido       hilos:  20330 ms, timeout=True, bloqueos proxy=0, título «», eliminado=True
+[páginas] endurecido       disco:   3109 ms, timeout=False, bloqueos proxy=0, título «Disco 480 MB», eliminado=True
+[páginas] endurecido  bucle_http:   2980 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas] endurecido    bucle_js:   2957 ms, timeout=False, bloqueos proxy=0, título «Bucle JS», eliminado=True
+[páginas] endurecido    descarga:   2982 ms, timeout=False, bloqueos proxy=0, título «Descarga», eliminado=True
+[páginas] endurecido    permisos:   2900 ms, timeout=False, bloqueos proxy=0, título «Permisos», eliminado=True
+[páginas] endurecido  inundacion:  15076 ms, timeout=False, bloqueos proxy=212, título «Inundacion», eliminado=True
+[páginas]     gvisor        ssrf:   6658 ms, timeout=False, bloqueos proxy=31, título «Bloqueado por QR-Sandbox», eliminado=True
+[páginas]     gvisor     memoria:   3210 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas]     gvisor         cpu:  18095 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas]     gvisor       hilos:  20509 ms, timeout=True, bloqueos proxy=0, título «», eliminado=True
+[páginas]     gvisor       disco:   4538 ms, timeout=False, bloqueos proxy=0, título «Disco 200 MB», eliminado=True
+[páginas]     gvisor  bucle_http:   4331 ms, timeout=False, bloqueos proxy=0, título «», eliminado=True
+[páginas]     gvisor    bucle_js:   4427 ms, timeout=False, bloqueos proxy=0, título «Bucle JS», eliminado=True
+[páginas]     gvisor    descarga:   4203 ms, timeout=False, bloqueos proxy=0, título «Descarga», eliminado=True
+[páginas]     gvisor    permisos:   4319 ms, timeout=False, bloqueos proxy=0, título «Permisos», eliminado=True
+[páginas]     gvisor  inundacion:  16518 ms, timeout=False, bloqueos proxy=260, título «Inundacion», eliminado=True

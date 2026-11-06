@@ -4,11 +4,13 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    WEB_DIR=/app/web
 
 WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
+COPY web ./web
 RUN pip install . \
     # Usuario sin privilegios: si la API se compromete, no es root en el contenedor.
     && useradd --system --uid 10001 --no-create-home api \

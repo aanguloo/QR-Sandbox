@@ -70,6 +70,9 @@ TextoCorto = Annotated[str, StringConstraints(max_length=500)]
 Ms = Annotated[int, Field(ge=0, le=120_000)]
 
 
+Permiso = Literal["geolocalizacion", "camara", "microfono", "notificaciones"]
+
+
 class _Base(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
@@ -93,6 +96,8 @@ class ResultadoWorker(_Base):
     imagenes: Annotated[
         list[Annotated[str, StringConstraints(max_length=160)]], Field(max_length=40)
     ] = []
+    # Permisos sensibles que la página pidió (el sandbox los niega siempre).
+    permisos: Annotated[list[Permiso], Field(max_length=5)] = []
 
 
 class EvRedireccion(_Base):
@@ -134,6 +139,12 @@ class EvMarcaDetectada(_Base):
     dominio: Dominio
 
 
+class EvPermisoSolicitado(_Base):
+    tipo: Literal["permiso_solicitado"]
+    t_ms: Ms
+    permiso: Permiso
+
+
 class EvCaptura(_Base):
     tipo: Literal["captura"]
     t_ms: Ms
@@ -159,6 +170,7 @@ Evento = Annotated[
     | EvFormularioPassword
     | EvDescargaBloqueada
     | EvMarcaDetectada
+    | EvPermisoSolicitado
     | EvCaptura
     | EvFin
     | EvError,

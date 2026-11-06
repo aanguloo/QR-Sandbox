@@ -1,0 +1,4 @@
+perfil,duracion_ms,salida_excedida,bytes_leidos,eventos_aceptados,descartados_esquema,descartados_tasa,agrupados,contenedor_eliminado,memoria_pico_orquestador_mb
+basico,500,True,563009,25,2,899,"{""request_tercero"": 76}",True,0.4
+endurecido,464,True,563009,25,2,899,"{""request_tercero"": 76}",True,0.4
+gvisor,515,True,128506,25,1,899,"{""request_tercero"": 76}",True,0.2

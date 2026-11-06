@@ -20,7 +20,9 @@ dependencies = [
 # Cada imagen instala solo lo que necesita (menor superficie de ataque).
 orquestador = ["docker>=7.1", "pillow>=11"]
 worker = ["playwright==1.64.1"]
+experimentos = ["matplotlib>=3.9"]
 dev = [
+    "matplotlib>=3.9",
     "pytest>=8",
     "ruff>=0.6",
     "docker>=7.1",

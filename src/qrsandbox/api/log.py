@@ -16,9 +16,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from qrsandbox.comun.esquemas import Url
+from qrsandbox.comun.esquemas import Url, normalizar_url
 from qrsandbox.tlog.log import LogTransparencia, RegistroRechazado, cargar_o_crear_clave
-from qrsandbox.tlog.registro import ClavePublica, SolicitudRegistro
+from qrsandbox.tlog.registro import ClavePublica, SolicitudRegistro, SolicitudRevocacion
 
 router = APIRouter(prefix="/log")
 
@@ -75,6 +75,30 @@ def registrar(solicitud: SolicitudRegistro, log: Log) -> dict:
     try:
         return log.agregar(solicitud)
     except RegistroRechazado as e:
+        raise HTTPException(400, str(e)) from None
+
+
+@router.post("/revocaciones", status_code=201)
+def revocar(solicitud: SolicitudRevocacion, log: Log) -> dict:
+    """El comercio retira un QR. Debe firmarlo la misma clave que lo registró."""
+    try:
+        return log.revocar(solicitud)
+    except RegistroRechazado as e:
+        raise HTTPException(400, str(e)) from None
+
+
+class PedidoNormalizar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: Annotated[str, Field(max_length=2048)]
+
+
+@router.post("/normalizar")
+def normalizar(pedido: PedidoNormalizar) -> dict:
+    """Forma normalizada de una URL, para que el navegador firme exactamente lo que el
+    log acepta (el `URL` de JavaScript normaliza distinto que el servidor)."""
+    try:
+        return {"url": normalizar_url(pedido.url)}
+    except ValueError as e:
         raise HTTPException(400, str(e)) from None
 
 

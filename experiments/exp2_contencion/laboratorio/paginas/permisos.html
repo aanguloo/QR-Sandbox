@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Permisos</title><h1>Permisos</h1>
+<script>
+
+// Pide ubicación, cámara, micrófono y notificaciones.
+navigator.geolocation && navigator.geolocation.getCurrentPosition(() => {}, () => {});
+navigator.mediaDevices && navigator.mediaDevices.getUserMedia({video: true}).catch(() => {});
+navigator.mediaDevices && navigator.mediaDevices.getUserMedia({audio: true}).catch(() => {});
+window.Notification && Notification.requestPermission();
+</script>

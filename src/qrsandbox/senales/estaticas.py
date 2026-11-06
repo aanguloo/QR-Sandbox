@@ -16,6 +16,7 @@ from qrsandbox.senales.dominio import (
     cargar_marcas,
     deshacer_sustituciones,
     dominio_de_alguna_marca,
+    es_rastreador,
     esqueleto_homoglifos,
     levenshtein,
     partes_host,
@@ -128,6 +129,18 @@ def senal_palabras_clave(url: str) -> list[Hallazgo]:
                          f"{', '.join(encontradas[:4])}.", "usa palabras como «"
                          + encontradas[0] + "» en la dirección")]
     return []
+
+
+def hallazgo_rastreador(host: str) -> Hallazgo:
+    return Hallazgo(
+        "rastreador_ip",
+        f"El enlace pasa por {host}, un servicio que registra la IP (y con ella la ubicación "
+        "aproximada), el navegador y el teléfono de quien lo abre, antes de redirigir.",
+        "pasa por un servicio que registra tu IP y ubicación aproximada")
+
+
+def senal_rastreador(p: PartesHost) -> list[Hallazgo]:
+    return [hallazgo_rastreador(p.host)] if es_rastreador(p) else []
 
 
 # ---------------------------------------------------------------- marcas y homoglifos
@@ -272,7 +285,7 @@ def analizar_url(
     h += marca
     if not any(x.codigo == "homoglifos_marca" for x in marca):
         h += senal_punycode(p)
-    h += senal_tld(p) + senal_acortador(p) + senal_subdominios(p) + senal_palabras_clave(url)
+    h += senal_rastreador(p) + senal_tld(p) + senal_acortador(p) + senal_subdominios(p) + senal_palabras_clave(url)
     r.datos = {"host": p.host, "host_unicode": p.host_unicode, "dominio": p.registrable,
                "lista_negra_cargada": listas is not None and not listas.vacia,
                "rango_tranco": listas.popularidad(p.registrable) if listas and p.registrable else None}

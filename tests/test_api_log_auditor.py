@@ -32,7 +32,7 @@ def nuevo_log(tmp_path, clave_log, nombre="tlog.sqlite"):
 def cliente(tmp_path, clave_log):
     log = nuevo_log(tmp_path, clave_log)
     app.dependency_overrides[api_log.obtener_log] = lambda: log
-    yield TestClient(app)
+    yield TestClient(app, headers={"X-QRSandbox-CSRF": "1"})
     app.dependency_overrides.clear()
 
 

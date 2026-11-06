@@ -1,0 +1,31 @@
+perfil,pagina,duracion_ms,codigo_salida,timeout,salida_excedida,error,contenedor_eliminado,eventos,descartados_esquema,descartados_tasa,agrupados,frames,proxy_bloqueos,motivos_bloqueo,titulo,permisos,descargas_bloqueadas,errores_worker
+basico,ssrf,3594,0,False,False,,True,13,0,1,{},2,21,"dns_fallido,link_local_metadatos,loopback,privada,puerto_no_permitido",Bloqueado por QR-Sandbox,,0,egreso bloqueado por el proxy (link_local_metadatos): http:/
+basico,memoria,6677,0,False,False,,True,2,0,0,{},3,0,,Memoria 1600 MB,,0,
+basico,cpu,17898,1,False,False,,True,4,0,0,{},1,0,,,,0,timeout de carga | timeout total del worker
+basico,hilos,20671,137,True,False,timeout del worker,True,1,0,0,{},1,0,,,,0,
+basico,disco,3010,0,False,False,,True,2,0,1,{},2,0,,Disco 512 MB,,0,
+basico,bucle_http,2799,0,False,False,,True,21,0,0,{},2,0,,,,0,Page.goto: net::ERR_TOO_MANY_REDIRECTS at http://172.31.250.
+basico,bucle_js,2798,0,False,False,,True,27,0,0,{},5,0,,Bucle JS,,0,
+basico,descarga,2779,0,False,False,,True,3,0,1,{},2,0,,Descarga,,1,
+basico,permisos,2800,0,False,False,,True,4,0,1,{},2,0,,Permisos,"geolocalizacion,notificaciones",0,
+basico,inundacion,15001,0,False,False,,True,28,0,0,"{""request_tercero"": 25}",3,273,dns_fallido,Inundacion,,0,timeout de carga
+endurecido,ssrf,6733,0,False,False,,True,13,0,0,{},3,30,"dns_fallido,link_local_metadatos,loopback,privada,puerto_no_permitido",Bloqueado por QR-Sandbox,,0,egreso bloqueado por el proxy (link_local_metadatos): http:/
+endurecido,memoria,1701,1,False,False,,True,1,0,0,{},1,0,,,,0,
+endurecido,cpu,17785,1,False,False,,True,4,0,0,{},0,0,,,,0,timeout de carga | timeout total del worker
+endurecido,hilos,20330,1,True,False,timeout del worker,True,3,0,0,{},1,0,,,,0,timeout total del worker
+endurecido,disco,3109,0,False,False,,True,2,0,1,{},2,0,,Disco 480 MB,,0,
+endurecido,bucle_http,2980,0,False,False,,True,21,0,0,{},2,0,,,,0,Page.goto: net::ERR_TOO_MANY_REDIRECTS at http://172.31.250.
+endurecido,bucle_js,2957,0,False,False,,True,27,0,1,{},4,0,,Bucle JS,,0,
+endurecido,descarga,2982,0,False,False,,True,3,0,0,{},2,0,,Descarga,,1,
+endurecido,permisos,2900,0,False,False,,True,4,0,0,{},2,0,,Permisos,"geolocalizacion,notificaciones",0,
+endurecido,inundacion,15088,0,False,False,,True,28,0,0,"{""request_tercero"": 25}",3,127,dns_fallido,Inundacion,,0,timeout de carga
+gvisor,ssrf,6658,0,False,False,,True,13,0,1,{},3,31,"dns_fallido,link_local_metadatos,loopback,privada,puerto_no_permitido",Bloqueado por QR-Sandbox,,0,egreso bloqueado por el proxy (link_local_metadatos): http:/
+gvisor,memoria,3210,137,False,False,,True,1,0,0,{},1,0,,,,0,
+gvisor,cpu,18095,1,False,False,,True,4,0,0,{},1,0,,,,0,timeout de carga | timeout total del worker
+gvisor,hilos,20509,137,True,False,timeout del worker,True,1,0,0,{},2,0,,,,0,
+gvisor,disco,4538,0,False,False,,True,2,0,1,{},2,0,,Disco 200 MB,,0,
+gvisor,bucle_http,4331,0,False,False,,True,21,0,1,{},2,0,,,,0,Page.goto: net::ERR_TOO_MANY_REDIRECTS at http://172.31.250.
+gvisor,bucle_js,4427,0,False,False,,True,19,0,0,{},5,0,,Bucle JS,,0,
+gvisor,descarga,4203,0,False,False,,True,3,0,1,{},2,0,,Descarga,,1,
+gvisor,permisos,4319,0,False,False,,True,4,0,1,{},2,0,,Permisos,"geolocalizacion,notificaciones",0,
+gvisor,inundacion,16532,0,False,False,,True,28,0,1,"{""request_tercero"": 25}",3,288,dns_fallido,Inundacion,,0,timeout de carga

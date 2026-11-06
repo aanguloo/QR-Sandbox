@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Memoria</title><h1>Memoria</h1>
+<script>
+
+// Reserva memoria sin parar (tope de seguridad: 2 GB) para probar el límite de 512 MB.
+const bloques = []; let mb = 0;
+function comer() { for (let i = 0; i < 20 && mb < 2048; i++) { bloques.push(new Uint8Array(16 * 1024 * 1024).fill(1)); mb += 16; } document.title = 'Memoria ' + mb + ' MB'; if (mb < 2048) setTimeout(comer, 10); }
+comer();
+</script>

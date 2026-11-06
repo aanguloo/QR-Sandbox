@@ -112,8 +112,10 @@ def test_timestamp_viejo_o_futuro_se_rechaza(log, comercio):
 def test_duplicado_se_rechaza(log, comercio):
     s = registro(comercio)
     log.agregar(s)
-    with pytest.raises(RegistroRechazado, match="duplicado"):
+    with pytest.raises(RegistroRechazado, match="repetido"):  # misma solicitud firmada
         log.agregar(s)
+    with pytest.raises(RegistroRechazado, match="duplicado"):  # mismo QR, firma nueva
+        log.agregar(registro(comercio, timestamp=AHORA + 5))
 
 
 @pytest.mark.parametrize(

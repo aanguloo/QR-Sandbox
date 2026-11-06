@@ -25,6 +25,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstra
 from qrsandbox.comun.esquemas import MAX_URL, normalizar_url
 
 VERSION_REGISTRO = "qrtlog-registro-v1"
+VERSION_REVOCACION = "qrtlog-revocacion-v1"
 VERSION_STH = "qrtlog-sth-v1"
 
 
@@ -96,6 +97,33 @@ class SolicitudRegistro(BaseModel):
     firma: Firma
 
 
+class Revocacion(BaseModel):
+    """El comercio retira un QR que ya no usa (o que registró por error).
+
+    Solo la MISMA clave que firmó el registro puede revocarlo (lo verifica el log y
+    cualquier auditor). Es una hoja más del log: la revocación también queda auditada y
+    el registro original no se borra (append-only).
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    v: Literal["qrtlog-revocacion-v1"]
+    indice: Annotated[int, Field(ge=0)]  # hoja del registro que se revoca
+    motivo: Annotated[str, StringConstraints(max_length=200), AfterValidator(_sin_control)]
+    timestamp: Annotated[int, Field(ge=0)]
+    clave_publica: ClavePublica
+
+    def canonico(self) -> bytes:
+        return bytes_canonicos(self.model_dump())
+
+
+class SolicitudRevocacion(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    revocacion: Revocacion
+    firma: Firma
+
+
 # ---------------------------------------------------------------- firmas Ed25519
 
 
@@ -121,6 +149,11 @@ def firmar_registro(clave: Ed25519PrivateKey, **campos) -> SolicitudRegistro:
     """Ayuda para tests, scripts y el Experimento 3 (en producción firma el navegador)."""
     registro = Registro(v=VERSION_REGISTRO, clave_publica=clave_publica_b64(clave), **campos)
     return SolicitudRegistro(registro=registro, firma=firmar(clave, registro.canonico()))
+
+
+def firmar_revocacion(clave: Ed25519PrivateKey, **campos) -> SolicitudRevocacion:
+    r = Revocacion(v=VERSION_REVOCACION, clave_publica=clave_publica_b64(clave), **campos)
+    return SolicitudRevocacion(revocacion=r, firma=firmar(clave, r.canonico()))
 
 
 def mensaje_sth(tamano: int, raiz: bytes, timestamp_ms: int) -> bytes:

@@ -32,7 +32,9 @@ from qrsandbox.comun.esquemas import normalizar_url
 from qrsandbox.tlog import merkle
 from qrsandbox.tlog.registro import (
     Registro,
+    Revocacion,
     SolicitudRegistro,
+    SolicitudRevocacion,
     bytes_canonicos,
     clave_publica_b64,
     firmar,
@@ -147,6 +149,14 @@ class LogTransparencia:
         con = sqlite3.connect(self.ruta_db)
         try:
             con.executescript(ESQUEMA)  # hace su propio COMMIT: va fuera de _conexion()
+            # Migración (Fase 5): tipo de hoja y revocaciones. ADD COLUMN no reescribe filas.
+            columnas = {c[1] for c in con.execute("PRAGMA table_info(hojas)")}
+            if "tipo" not in columnas:
+                con.execute("ALTER TABLE hojas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'registro'")
+            if "revoca" not in columnas:
+                con.execute("ALTER TABLE hojas ADD COLUMN revoca INTEGER")
+            con.execute("CREATE UNIQUE INDEX IF NOT EXISTS hojas_revoca ON hojas (revoca)")
+            con.commit()
         finally:
             con.close()
         with self._conexion() as con:
@@ -182,25 +192,70 @@ class LogTransparencia:
         datos = bytes_canonicos(
             {"registro": r.model_dump(), "firma": solicitud.firma, "t_log_ms": t_log_ms}
         )
-        # El lock serializa escrituras en este proceso; BEGIN es suficiente con un solo
-        # escritor (la API). El índice es el número de hojas: secuencial y sin huecos.
         with self._lock, self._conexion() as con:
+            # Anti-replay: una solicitud firmada solo se acepta UNA vez. Sin esto, quien
+            # guardó la solicitud original podría reactivar un QR que el comercio revocó.
+            for (anterior,) in con.execute(
+                "SELECT datos FROM hojas WHERE tipo = 'registro' AND clave_publica = ? AND url = ?",
+                (r.clave_publica, r.url_destino),
+            ):
+                if json.loads(anterior)["firma"] == solicitud.firma:
+                    raise RegistroRechazado("registro repetido: esa solicitud firmada ya se usó")
             if con.execute(
-                "SELECT 1 FROM hojas WHERE clave_publica = ? AND url = ? AND lat_e6 = ? "
-                "AND lon_e6 = ? AND radio_m = ?",
+                "SELECT 1 FROM hojas WHERE tipo = 'registro' AND clave_publica = ? AND url = ? "
+                "AND lat_e6 = ? AND lon_e6 = ? AND radio_m = ? AND indice NOT IN "
+                "(SELECT revoca FROM hojas WHERE revoca IS NOT NULL)",
                 (r.clave_publica, r.url_destino, r.lat_e6, r.lon_e6, r.radio_m),
             ).fetchone():
                 raise RegistroRechazado("registro duplicado")
-            indice = con.execute("SELECT COUNT(*) FROM hojas").fetchone()[0]
-            con.execute(
-                "INSERT INTO hojas VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    indice, datos, merkle.hash_hoja(datos), r.clave_publica, r.url_destino,
-                    r.lat_e6, r.lon_e6, r.radio_m, t_log_ms,
-                ),
+            return self._insertar(
+                con, datos, r.clave_publica, r.url_destino, r.lat_e6, r.lon_e6, r.radio_m,
+                t_log_ms, "registro", None,
             )
-            hojas = self._hashes(con)
-            sth = self._firmar_sth(con, hojas)
+
+    def revocar(self, solicitud: SolicitudRevocacion) -> dict:
+        """Agrega una revocación firmada por la MISMA clave que registró el QR."""
+        rv = solicitud.revocacion
+        if not verificar_firma(rv.clave_publica, rv.canonico(), solicitud.firma):
+            raise RegistroRechazado("firma inválida")
+        ahora = self.reloj()
+        if abs(ahora - rv.timestamp) > TOLERANCIA_TIMESTAMP_S:
+            raise RegistroRechazado("timestamp fuera de la ventana permitida (±10 min)")
+        t_log_ms = int(ahora * 1000)
+        datos = bytes_canonicos(
+            {"revocacion": rv.model_dump(), "firma": solicitud.firma, "t_log_ms": t_log_ms}
+        )
+        with self._lock, self._conexion() as con:
+            fila = con.execute(
+                "SELECT tipo, clave_publica, url, lat_e6, lon_e6, radio_m FROM hojas "
+                "WHERE indice = ?", (rv.indice,),
+            ).fetchone()
+            if fila is None:
+                raise RegistroRechazado("no existe un registro con ese índice")
+            tipo, clave, url, lat_e6, lon_e6, radio_m = fila
+            if tipo != "registro":
+                raise RegistroRechazado("solo se pueden revocar registros")
+            if clave != rv.clave_publica:
+                # Adversario C: nadie puede retirar el QR de otro comercio.
+                raise RegistroRechazado("solo la clave que registró el QR puede revocarlo")
+            if con.execute("SELECT 1 FROM hojas WHERE revoca = ?", (rv.indice,)).fetchone():
+                raise RegistroRechazado("ese registro ya está revocado")
+            return self._insertar(
+                con, datos, clave, url, lat_e6, lon_e6, radio_m, t_log_ms, "revocacion", rv.indice
+            )
+
+    def _insertar(self, con, datos, clave, url, lat_e6, lon_e6, radio_m, t_log_ms, tipo, revoca):
+        # El lock serializa escrituras en este proceso; BEGIN es suficiente con un solo
+        # escritor (la API). El índice es el número de hojas: secuencial y sin huecos.
+        indice = con.execute("SELECT COUNT(*) FROM hojas").fetchone()[0]
+        con.execute(
+            "INSERT INTO hojas (indice, datos, hash, clave_publica, url, lat_e6, lon_e6, "
+            "radio_m, t_log_ms, tipo, revoca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (indice, datos, merkle.hash_hoja(datos), clave, url, lat_e6, lon_e6, radio_m,
+             t_log_ms, tipo, revoca),
+        )
+        hojas = self._hashes(con)
+        sth = self._firmar_sth(con, hojas)
         return {
             "indice": indice,
             "hoja": datos.decode(),
@@ -312,21 +367,26 @@ class LogTransparencia:
         dlat = alcance / 111_320
         dlon = alcance / (111_320 * max(0.01, math.cos(math.radians(lat))))
         with self._conexion() as con:
+            revocados = {f[0] for f in con.execute(
+                "SELECT revoca FROM hojas WHERE revoca IS NOT NULL").fetchall()}
             filas = con.execute(
                 "SELECT indice, datos, url, lat_e6, lon_e6, radio_m FROM hojas "
-                "WHERE lat_e6 BETWEEN ? AND ? AND lon_e6 BETWEEN ? AND ?",
+                "WHERE tipo = 'registro' AND lat_e6 BETWEEN ? AND ? AND lon_e6 BETWEEN ? AND ?",
                 (int((lat - dlat) * 1e6), int((lat + dlat) * 1e6),
                  int((lon - dlon) * 1e6), int((lon + dlon) * 1e6)),
             ).fetchall()
             hojas = self._hashes(con)
         sth = self.sth()
-        coincidencias, otros = [], []
+        coincidencias, otros, revocados_cercanos = [], [], []
         for indice, datos, url_reg, lat_e6, lon_e6, radio_m in filas:
             d = distancia_m(lat, lon, lat_e6 / 1e6, lon_e6 / 1e6)
             if d > radio_m + margen_m or indice >= sth.tamano:
                 continue
             entrada = {"indice": indice, "hoja": datos.decode(), "distancia_m": round(d)}
-            if misma_url(url, url_reg):
+            if indice in revocados:
+                # Un QR retirado por su comercio no verifica ni alerta; se informa aparte.
+                revocados_cercanos.append(entrada)
+            elif misma_url(url, url_reg):
                 ruta = merkle.ruta_inclusion(indice, hojas[: sth.tamano])
                 entrada["prueba_inclusion"] = [h.hex() for h in ruta]
                 coincidencias.append(entrada)
@@ -337,6 +397,7 @@ class LogTransparencia:
             "estado": estado,
             "coincidencias": coincidencias,
             "otros_destinos_cercanos": otros,
+            "revocados_cercanos": revocados_cercanos,
             "sth": sth.a_dict(),
             "clave_log": self.clave_publica,
             "ubicacion_usada": {"lat": lat, "lon": lon},
@@ -344,7 +405,19 @@ class LogTransparencia:
 
 
 def leer_hoja(texto: str) -> tuple[Registro, str, int]:
-    """Decodifica una hoja (útil para auditores y para la web)."""
+    """Decodifica una hoja de REGISTRO (ValueError si es otra cosa)."""
     d = json.loads(texto)
+    if "registro" not in d:
+        raise ValueError("la hoja no es un registro")
     return Registro.model_validate(d["registro"]), d["firma"], d["t_log_ms"]
+
+
+def leer_entrada(texto: str) -> tuple[str, Registro | Revocacion, str, int]:
+    """Decodifica cualquier hoja: ("registro" | "revocacion", modelo, firma, t_log_ms)."""
+    d = json.loads(texto)
+    if "registro" in d:
+        return "registro", Registro.model_validate(d["registro"]), d["firma"], d["t_log_ms"]
+    if "revocacion" in d:
+        return "revocacion", Revocacion.model_validate(d["revocacion"]), d["firma"], d["t_log_ms"]
+    raise ValueError("hoja de tipo desconocido")
 

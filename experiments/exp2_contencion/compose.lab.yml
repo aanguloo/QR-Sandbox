@@ -1,0 +1,21 @@
+# Experimento 2: laboratorio local de páginas hostiles PROPIAS.
+#   docker compose -f docker-compose.yml -f experiments/exp2_contencion/compose.lab.yml up -d --wait
+# El proxy permite EXACTAMENTE 172.31.250.20:8080 (todo lo demás interno sigue bloqueado).
+# Para volver al modo normal: make up
+services:
+  proxy:
+    environment:
+      PROXY_LAB: "172.31.250.20:8080"
+  laboratorio:
+    image: qrsandbox-proxy:dev
+    entrypoint: ["python", "/lab/servidor.py"]
+    command: []
+    volumes:
+      - ./experiments/exp2_contencion/laboratorio:/lab:ro
+    networks:
+      sandbox:
+        ipv4_address: 172.31.250.20
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: "10001:10001"

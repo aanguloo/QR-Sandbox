@@ -72,6 +72,34 @@ def dominio_base(host: str) -> str:
 
 
 PROXY = os.environ.get("QRS_PROXY", "")
+PERMISOS = {"geolocalizacion", "camara", "microfono", "notificaciones"}
+
+# Se instala ANTES de que corra la página: si pide ubicación, cámara, micrófono o
+# notificaciones, se avisa al worker y se NIEGA. La página podría esquivarlo (p. ej. con un
+# iframe nuevo): es una señal de mejor esfuerzo, y el aviso que llega es tainted.
+JS_PERMISOS = """(() => {
+  const avisar = (p) => { try { window.__qrsandboxPermiso(p); } catch (e) {} };
+  const geo = navigator.geolocation;
+  if (geo) {
+    const negar = (ok, error) => {
+      avisar('geolocalizacion');
+      if (typeof error === 'function') setTimeout(() => error({ code: 1, message: 'User denied Geolocation' }), 0);
+      return 0;
+    };
+    try { Object.defineProperty(geo, 'getCurrentPosition', { value: negar }); } catch (e) {}
+    try { Object.defineProperty(geo, 'watchPosition', { value: negar }); } catch (e) {}
+  }
+  const md = navigator.mediaDevices;
+  if (md && md.getUserMedia) {
+    md.getUserMedia = (c) => {
+      avisar(c && c.audio && !c.video ? 'microfono' : 'camara');
+      return Promise.reject(new DOMException('Permission denied', 'NotAllowedError'));
+    };
+  }
+  if (window.Notification) {
+    try { Notification.requestPermission = () => { avisar('notificaciones'); return Promise.resolve('denied'); }; } catch (e) {}
+  }
+})();"""
 
 # Pistas de logos: texto alternativo y nombre de archivo de las imágenes, y el favicon.
 # Corre en la página (que puede manipular el JS): el resultado es tainted y se valida.
@@ -155,6 +183,15 @@ async def analizar(url: str) -> None:
             accept_downloads=False,  # nunca guardar archivos de la página
             service_workers="block",  # que la página no deje código persistente
         )
+        permisos: list[str] = []
+
+        def al_permiso(_origen, permiso) -> None:
+            if permiso in PERMISOS and permiso not in permisos:
+                permisos.append(permiso)
+                emitir("permiso_solicitado", permiso=permiso)
+
+        await contexto.expose_binding("__qrsandboxPermiso", al_permiso)
+        await contexto.add_init_script(JS_PERMISOS)
         pagina = await contexto.new_page()
         await iniciar_screencast(contexto, pagina)
 
@@ -273,6 +310,7 @@ async def analizar(url: str) -> None:
                 "tiempo_carga_ms": tiempo_carga_ms,
                 "texto_visible": texto_visible,
                 "imagenes": imagenes,
+                "permisos": permisos,
             },
         )
         await navegador.close()

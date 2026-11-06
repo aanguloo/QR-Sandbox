@@ -1,0 +1,54 @@
+[escape]     basico reservar 1,5 GB de memoria                    permitido  reservó 1500 MB
+[escape]     basico fork bomb (hasta 1500 procesos)               permitido  creó 1500 procesos
+[escape]     basico escribir en el sistema de archivos raíz       permitido  se pudo escribir en /usr
+[escape]     basico llenar /tmp con 200 MB                        permitido  escribió 200 MB
+[escape]     basico acaparar CPU con 4 procesos                   permitido  obtuvo ~3.3 núcleos
+[escape]     basico ptrace (inspeccionar procesos)                permitido  permitido
+[escape]     basico unshare: crear user namespace                 BLOQUEADO  PermissionError: [Errno 1] Operation not permitted
+[escape]     basico mount (montar un sistema de archivos)         BLOQUEADO  Operation not permitted
+[escape]     basico socket crudo (CAP_NET_RAW)                    permitido  permitido
+[escape]     basico volverse root (setuid 0)                      permitido  ya corre como root
+[escape]     basico io_uring (superficie de exploits del kernel)  BLOQUEADO  Operation not permitted
+[escape]     basico ver el kernel del anfitrión                   permitido  Linux version 6.6.87.2-microsoft-standard-WSL2 (root@439a258ad544) (gcc (GCC) 11
+[escape]     basico socket de Docker                              BLOQUEADO  no existe en el contenedor
+[escape]     basico internet directo (1.1.1.1:443)                BLOQUEADO  Network is unreachable
+[escape]     basico metadatos de la nube (169.254.169.254)        BLOQUEADO  Network is unreachable
+[escape]     basico anfitrión vía gateway (172.31.250.1:22)       BLOQUEADO  Connection refused
+[escape]     basico proxy de salida (172.31.250.2:3128)           permitido  conectó (esperado: es la única salida, y filtra destinos)
+[escape] endurecido reservar 1,5 GB de memoria                    BLOQUEADO  matado por el límite de memoria (OOM) tras 400 MB
+[escape] endurecido fork bomb (hasta 1500 procesos)               BLOQUEADO  se detuvo en 255 procesos (Resource temporarily unavailable)
+[escape] endurecido escribir en el sistema de archivos raíz       BLOQUEADO  OSError: [Errno 30] Read-only file system: '/usr/qrsandbox-escape'
+[escape] endurecido llenar /tmp con 200 MB                        BLOQUEADO  se detuvo en 128 MB (No space left on device)
+[escape] endurecido acaparar CPU con 4 procesos                   BLOQUEADO  obtuvo ~1.0 núcleos
+[escape] endurecido ptrace (inspeccionar procesos)                BLOQUEADO  EPERM
+[escape] endurecido unshare: crear user namespace                 BLOQUEADO  PermissionError: [Errno 1] Operation not permitted
+[escape] endurecido mount (montar un sistema de archivos)         BLOQUEADO  Operation not permitted
+[escape] endurecido socket crudo (CAP_NET_RAW)                    BLOQUEADO  PermissionError: [Errno 1] Operation not permitted
+[escape] endurecido volverse root (setuid 0)                      BLOQUEADO  PermissionError: [Errno 1] Operation not permitted
+[escape] endurecido io_uring (superficie de exploits del kernel)  BLOQUEADO  Operation not permitted
+[escape] endurecido ver el kernel del anfitrión                   permitido  Linux version 6.6.87.2-microsoft-standard-WSL2 (root@439a258ad544) (gcc (GCC) 11
+[escape] endurecido socket de Docker                              BLOQUEADO  no existe en el contenedor
+[escape] endurecido internet directo (1.1.1.1:443)                BLOQUEADO  Network is unreachable
+[escape] endurecido metadatos de la nube (169.254.169.254)        BLOQUEADO  Network is unreachable
+[escape] endurecido anfitrión vía gateway (172.31.250.1:22)       BLOQUEADO  Connection refused
+[escape] endurecido proxy de salida (172.31.250.2:3128)           permitido  conectó (esperado: es la única salida, y filtra destinos)
+[escape]     gvisor reservar 1,5 GB de memoria                    BLOQUEADO  el contenedor completo fue terminado (código 137, OOMKilled=True)
+[escape]     gvisor fork bomb (hasta 1500 procesos)               BLOQUEADO  el contenedor completo fue terminado (código 137, OOMKilled=True)
+[escape]     gvisor escribir en el sistema de archivos raíz       BLOQUEADO  PermissionError: [Errno 13] Permission denied: '/usr/qrsandbox-escape'
+[escape]     gvisor llenar /tmp con 200 MB                        BLOQUEADO  se detuvo en 128 MB (No space left on device)
+[escape]     gvisor acaparar CPU con 4 procesos                   permitido  obtuvo ~1.7 núcleos
+[escape]     gvisor ptrace (inspeccionar procesos)                contenido  permitido, pero dentro del kernel de gVisor (no llega al anfitrión)
+[escape]     gvisor unshare: crear user namespace                 contenido  permitido, pero dentro del kernel de gVisor (no llega al anfitrión)
+[escape]     gvisor mount (montar un sistema de archivos)         BLOQUEADO  Operation not permitted
+[escape]     gvisor socket crudo (CAP_NET_RAW)                    BLOQUEADO  PermissionError: [Errno 1] Operation not permitted
+[escape]     gvisor volverse root (setuid 0)                      BLOQUEADO  OSError: [Errno 22] Invalid argument
+[escape]     gvisor io_uring (superficie de exploits del kernel)  BLOQUEADO  Function not implemented
+[escape]     gvisor ver el kernel del anfitrión                   BLOQUEADO  Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016
+[escape]     gvisor socket de Docker                              BLOQUEADO  no existe en el contenedor
+[escape]     gvisor internet directo (1.1.1.1:443)                BLOQUEADO  Network is unreachable
+[escape]     gvisor metadatos de la nube (169.254.169.254)        BLOQUEADO  Network is unreachable
+[escape]     gvisor anfitrión vía gateway (172.31.250.1:22)       BLOQUEADO  Connection refused
+[escape]     gvisor proxy de salida (172.31.250.2:3128)           permitido  conectó (esperado: es la única salida, y filtra destinos)
+[arranque]     basico: p50 367 ms
+[arranque] endurecido: p50 370 ms
+[arranque]     gvisor: p50 366 ms

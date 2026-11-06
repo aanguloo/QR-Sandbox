@@ -6,8 +6,8 @@ dispositivo del usuario: se analiza en un sandbox desechable y se contrasta con
 un **QR Transparency Log** (inspirado en Certificate Transparency) para detectar
 stickers superpuestos sobre QRs legítimos.
 
-> Estado: Fases 0–4 (base, worker/orquestador, endurecimiento + anti-SSRF, QR Transparency Log,
-> señales + veredicto explicado). Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
+> Estado: Fases 0–5 (base, sandbox endurecido + anti-SSRF, QR Transparency Log con revocación,
+> señales + veredicto explicado, aplicación web con análisis en vivo). Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
 > seguridad y el plan de fases. La especificación completa está en
 > [PROMPT_QR-Sandbox.md](PROMPT_QR-Sandbox.md).
 
@@ -22,9 +22,11 @@ stickers superpuestos sobre QRs legítimos.
 ```bash
 cp .env.example .env     # opcional
 make test                # crea .venv, instala dependencias y corre pytest
-make up                  # construye el worker, levanta API + orquestador y consulta /health
-curl -X POST http://127.0.0.1:8000/analisis \
+make up                  # construye el worker, levanta API + orquestador + proxy
+# Web: http://127.0.0.1:8000  (Escanear · Comercio · Log)
+curl -X POST 'http://127.0.0.1:8000/analisis?esperar=true' -H 'X-QRSandbox-CSRF: 1' \
      -H 'content-type: application/json' -d '{"url":"https://example.com"}'
+make lan                 # HTTPS en la red local (puerto 8443) para probar desde el celular
 make analizar URL=https://example.com   # lo mismo desde la terminal, sin la API
 make test-int            # tests de integración (Docker + internet)
 make down

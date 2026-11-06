@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4fd1">
+  <title>Explorador del log · QR-Sandbox</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/img/icono-192.png">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="module" src="/static/js/explorador.js"></script>
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">QR<span>·</span>Sandbox</a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/">Escanear</a>
+      <a href="/comercio">Comercio</a>
+      <a href="/log" aria-current="page">Log</a>
+      <a href="/ayuda">Ayuda</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Explorador del QR Transparency Log</h1>
+    <p class="bajada">Todo lo que ves aquí se verifica en tu navegador: no necesitas confiar en el servidor.</p>
+    <details class="explicacion tarjeta">
+      <summary>¿Qué es esto?</summary>
+      <p>Es el registro público de todos los QRs que los comercios han registrado (y retirado). Funciona como un libro de actas: solo se pueden <strong>agregar</strong> páginas, nunca borrar ni cambiar las anteriores.</p>
+      <p>Cada cierto tiempo el registro «sella» su contenido con una firma (la <em>raíz firmada</em>). Tu navegador revisa esas firmas y comprueba que cada registro esté realmente adentro. Si alguien intentara cambiar el historial, las cuentas no cuadrarían y lo verías aquí como una alerta ✘.</p>
+      <p>Es la misma idea que usan los navegadores para vigilar los certificados de seguridad de todos los sitios web (Certificate Transparency).</p>
+    </details>
+
+    <section class="tarjeta pila" id="seccion-sth" aria-live="polite"></section>
+
+    <section class="tarjeta pila">
+      <h2>Registros</h2>
+      <div id="lista"></div>
+      <div class="fila"><button id="boton-mas" type="button" class="oculto">Ver más</button></div>
+    </section>
+
+    <section class="tarjeta pila">
+      <h2>Consistencia entre dos raíces</h2>
+      <form id="form-consistencia" class="fila">
+        <input id="tam-a" type="number" min="1" placeholder="Tamaño A" aria-label="Tamaño A">
+        <input id="tam-b" type="number" min="1" placeholder="Tamaño B" aria-label="Tamaño B">
+        <button type="submit">Verificar</button>
+      </form>
+      <div id="resultado-consistencia" aria-live="polite"></div>
+    </section>
+
+    <section class="tarjeta pila">
+      <h2>Auditoría por clave</h2>
+      <p class="pequeno">Revisa todo lo registrado con una clave pública. Se descarga el log completo y se filtra aquí (no se confía en un filtro del servidor).</p>
+      <form id="form-auditoria" class="pila">
+        <input id="clave-auditoria" type="text" autocomplete="off" placeholder="Clave pública (base64)" aria-label="Clave pública">
+        <button type="submit">Auditar</button>
+      </form>
+      <div id="resultado-auditoria" aria-live="polite"></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -169,3 +169,14 @@ def cargar_marcas(ruta: str | None = None) -> tuple[Marca, ...]:
 
 def dominio_de_alguna_marca(registrable: str, marcas: tuple[Marca, ...]) -> bool:
     return any(m.es_dominio_legitimo(registrable) for m in marcas)
+
+
+@cache
+def cargar_rastreadores() -> frozenset[str]:
+    texto = resources.files("qrsandbox.senales").joinpath("rastreadores.json").read_text("utf-8")
+    return frozenset(json.loads(texto)["dominios"])
+
+
+def es_rastreador(p: PartesHost) -> bool:
+    lista = cargar_rastreadores()
+    return p.host in lista or p.registrable in lista

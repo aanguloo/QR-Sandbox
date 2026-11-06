@@ -17,7 +17,8 @@ TestClient de FastAPI en los tests).
 import json
 
 from qrsandbox.tlog import merkle
-from qrsandbox.tlog.registro import Registro, mensaje_sth, verificar_firma
+from qrsandbox.tlog.log import leer_entrada
+from qrsandbox.tlog.registro import mensaje_sth, verificar_firma
 
 PAGINA = 500
 
@@ -83,7 +84,8 @@ def auditar(http, estado: dict, completo: bool = False, clave_comercio: str | No
 
     propias: list[int] = []
     if completo and not alertas:
-        hojas, firmas_malas = [], []
+        hojas, firmas_malas, revocaciones_malas = [], [], []
+        claves_por_indice: dict[int, tuple[str, str]] = {}  # indice -> (tipo, clave)
         while len(hojas) < sth["tamano"]:
             pagina = _get(http, "/log/registros", desde=len(hojas), limite=PAGINA)["entradas"]
             if not pagina:
@@ -91,14 +93,25 @@ def auditar(http, estado: dict, completo: bool = False, clave_comercio: str | No
             for e in pagina[: sth["tamano"] - len(hojas)]:
                 datos = e["hoja"].encode()
                 hojas.append(merkle.hash_hoja(datos))
-                if not _registro_firmado(e["hoja"]):
+                entrada = _entrada_firmada(e["hoja"])
+                if entrada is None:
                     firmas_malas.append(e["indice"])
+                else:
+                    tipo, modelo = entrada
+                    claves_por_indice[e["indice"]] = (tipo, modelo.clave_publica)
+                    if tipo == "revocacion":
+                        # Solo la clave del registro puede revocarlo, y debe ser anterior.
+                        objetivo = claves_por_indice.get(modelo.indice)
+                        if objetivo != ("registro", modelo.clave_publica):
+                            revocaciones_malas.append(e["indice"])
                 if clave_comercio and _clave_de(e["hoja"]) == clave_comercio:
                     propias.append(e["indice"])
         if len(hojas) != sth["tamano"] or merkle.raiz(hojas) != bytes.fromhex(sth["raiz"]):
             alertas.append("las hojas descargadas no reproducen la raíz firmada")
         if firmas_malas:
             alertas.append(f"registros sin firma válida del comercio: {firmas_malas}")
+        if revocaciones_malas:
+            alertas.append(f"revocaciones de una clave ajena o de algo inexistente: {revocaciones_malas}")
         if not alertas:
             notas.append(f"{len(hojas)} hojas recalculadas: raíz y firmas correctas")
 
@@ -118,17 +131,18 @@ def verificar_entre(http, tamano1: int, tamano2: int, clave_log: str) -> str | N
     return verificar_consistencia_sths(http, viejo, nuevo)
 
 
-def _registro_firmado(hoja: str) -> bool:
+def _entrada_firmada(hoja: str):
+    """(tipo, modelo) si la hoja trae una firma válida de su clave; si no, None."""
     try:
-        d = json.loads(hoja)
-        r = Registro.model_validate(d["registro"])
-        return verificar_firma(r.clave_publica, r.canonico(), d["firma"])
+        tipo, modelo, firma, _ = leer_entrada(hoja)
     except Exception:  # noqa: BLE001 - cualquier hoja ilegible cuenta como inválida
-        return False
+        return None
+    return (tipo, modelo) if verificar_firma(modelo.clave_publica, modelo.canonico(), firma) else None
 
 
 def _clave_de(hoja: str) -> str | None:
     try:
-        return json.loads(hoja)["registro"]["clave_publica"]
+        d = json.loads(hoja)
+        return (d.get("registro") or d.get("revocacion"))["clave_publica"]
     except (ValueError, KeyError, TypeError):
         return None

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4fd1">
+  <title>Ayuda · QR-Sandbox</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/img/icono-192.png">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">QR<span>·</span>Sandbox</a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/">Escanear</a>
+      <a href="/comercio">Comercio</a>
+      <a href="/log">Log</a>
+      <a href="/ayuda" aria-current="page">Ayuda</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Cómo usar QR-Sandbox</h1>
+    <p class="bajada">Una guía corta para cuidarte de los QR falsos (lo que se conoce como <em>quishing</em>).</p>
+    <nav class="indice-ayuda tarjeta" aria-label="Contenido">
+      <a href="#que-es">¿Qué es?</a><a href="#escanear">Escanear</a><a href="#resultado">Leer el resultado</a>
+      <a href="#si-es-peligroso">Si sale peligroso</a><a href="#comercios">Para comercios</a>
+      <a href="#log">El registro público</a><a href="#privacidad">Privacidad</a><a href="#preguntas">Preguntas</a>
+    </nav>
+
+    <section class="tarjeta pila" id="que-es">
+      <h2>¿Qué es y por qué usarlo?</h2>
+      <p>Los estafadores usan códigos QR porque no puedes ver a dónde llevan antes de abrirlos. Basta con pegar un sticker sobre el QR de un parquímetro, una carta de restaurante o un cartel de pagos.</p>
+      <p>QR-Sandbox <strong>abre el enlace por ti</strong> en un navegador aislado (un «sandbox») en nuestro servidor, que se destruye al terminar. Así ves qué hace la página sin que tu teléfono la toque, y te explicamos en palabras simples si es peligrosa y por qué.</p>
+    </section>
+
+    <section class="tarjeta pila" id="escanear">
+      <h2>1. Escanear un QR</h2>
+      <ol class="pasos">
+        <li>En <a href="/">Escanear</a>, toca <strong>Usar la cámara</strong> y apunta al código. Si el QR te llegó por correo, WhatsApp o en un PDF, usa <strong>Subir una imagen</strong> con una captura de pantalla. También puedes pegar un enlace.</li>
+        <li>Verás <strong>a dónde lleva</strong>. Todavía no se abre nada: nunca te redirigimos automáticamente.</li>
+        <li>Deja marcada la casilla de <strong>ubicación aproximada</strong> si estás frente a un QR físico: sirve para comprobar si el comercio registró ese QR en ese lugar.</li>
+        <li>Toca <strong>Analizar en el sandbox</strong>.</li>
+      </ol>
+      <p class="pequeno">Si la cámara no funciona, revisa que el sitio esté abierto con https:// y que diste permiso a la cámara.</p>
+    </section>
+
+    <section class="tarjeta pila" id="resultado">
+      <h2>2. Leer el resultado</h2>
+      <p>Mientras se analiza verás <strong>en vivo</strong> lo que ve el navegador aislado y una lista de lo que hace el enlace. Al final aparecen <strong>fotos paso a paso</strong> de los momentos clave.</p>
+      <div class="leyenda">
+        <div class="tarjeta veredicto veredicto-peligroso"><strong>Peligroso (70–100):</strong> hay señales claras de fraude. No lo abras.</div>
+        <div class="tarjeta veredicto veredicto-sospechoso"><strong>Sospechoso (35–69):</strong> hay señales de riesgo. Mejor no abrirlo.</div>
+        <div class="tarjeta veredicto veredicto-sin_alertas"><strong>Sin alertas (0–34):</strong> no encontramos señales de riesgo. No es una garantía: revisa siempre lo que te pide la página.</div>
+      </div>
+      <p>Debajo verás <strong>cada razón</strong> con sus puntos y un «¿Qué significa?» para entenderla. Nada de cajas negras: el puntaje es la suma de esas razones.</p>
+      <p>Sobre el <strong>registro de QRs</strong>:</p>
+      <ul>
+        <li>✅ <strong>Verificado</strong>: el comercio registró este QR aquí, con su firma.</li>
+        <li>⚠️ <strong>No coincide</strong>: el QR registrado en este lugar lleva a otro sitio. Probablemente alguien pegó un sticker encima. <strong>Es la alerta más importante.</strong></li>
+        <li>❔ <strong>Sin registro</strong>: ningún comercio registró un QR aquí; el resultado se basa solo en el análisis del enlace.</li>
+      </ul>
+    </section>
+
+    <section class="tarjeta pila" id="si-es-peligroso">
+      <h2>3. Si sale peligroso o sospechoso</h2>
+      <ul>
+        <li>No abras el enlace ni escribas datos (contraseñas, RUT, tarjetas).</li>
+        <li>Si es un QR físico, mira si hay un sticker pegado encima y <strong>avísale al local</strong>.</li>
+        <li>Si necesitas ese servicio, escribe tú la dirección oficial o usa la app oficial.</li>
+        <li>Si ya escribiste datos: cambia tu contraseña de inmediato y llama a tu banco.</li>
+      </ul>
+      <p class="pequeno">Existe el botón «Abrir de todas formas», pero solo aparece después de confirmar que entiendes el riesgo.</p>
+    </section>
+
+    <section class="tarjeta pila" id="comercios">
+      <h2>4. Para comercios: registrar tus QR</h2>
+      <ol class="pasos">
+        <li>En <a href="/comercio">Comercio</a>, toca <strong>Crear clave</strong>. Es tu firma digital; se guarda en tu dispositivo, nunca en nuestro servidor.</li>
+        <li>Toca <strong>Descargar respaldo</strong> y guárdalo en un lugar seguro. Sin él no podrás retirar tus QRs si cambias de teléfono.</li>
+        <li>Escribe el enlace de tu QR y una descripción («Carta, mesa 4»), y marca en el mapa dónde lo vas a pegar (o usa «Usar mi ubicación» estando ahí).</li>
+        <li>Toca <strong>Firmar y registrar</strong>. Descarga el QR para imprimir y el recibo.</li>
+        <li>Si cambias de enlace, en «Mis QRs» toca <strong>Revocar</strong>: quien escanee el QR viejo dejará de verlo como verificado.</li>
+      </ol>
+    </section>
+
+    <section class="tarjeta pila" id="log">
+      <h2>5. El registro público</h2>
+      <p>En <a href="/log">Log</a> está la lista de todos los QRs registrados y retirados. Es público y solo se puede agregar información, nunca borrarla. Tu navegador comprueba las firmas por su cuenta, así que no tienes que confiar en nosotros: si alguien intentara cambiar el historial, lo verías como una alerta.</p>
+    </section>
+
+    <section class="tarjeta pila" id="privacidad">
+      <h2>Privacidad</h2>
+      <ul>
+        <li>Tu ubicación se redondea a unos 100 metros <strong>en tu propio teléfono</strong> antes de enviarse, y no se guarda.</li>
+        <li>No pedimos cuenta, nombre ni correo.</li>
+        <li>Las capturas de la página analizada se guardan solo un rato, para mostrarte el resultado.</li>
+        <li>La clave del comercio nunca sale de su dispositivo (salvo el respaldo que descargue).</li>
+      </ul>
+    </section>
+
+    <section class="tarjeta pila" id="preguntas">
+      <h2>Preguntas frecuentes</h2>
+      <details class="explicacion"><summary>¿Por qué no abren el enlace directo en mi teléfono?</summary>
+        <p>Porque una página maliciosa podría intentar robar datos, descargar programas o aprovechar fallas del navegador. En el sandbox eso le pasa a un navegador desechable y aislado, no a ti.</p></details>
+      <details class="explicacion"><summary>¿«Sin alertas» significa que es 100 % seguro?</summary>
+        <p>No. Significa que no encontramos señales de riesgo. Ninguna herramienta es perfecta: revisa siempre que la dirección sea la que esperas antes de pagar o escribir datos.</p></details>
+      <details class="explicacion"><summary>¿Para qué piden mi ubicación?</summary>
+        <p>Solo para comparar con los QRs que los comercios registraron cerca. Es opcional, se redondea a ~100 m y no se guarda.</p></details>
+      <details class="explicacion"><summary>¿Qué pasa si pierdo mi clave de comercio?</summary>
+        <p>Si tienes el respaldo, impórtalo en «Importar respaldo». Si no, puedes crear una clave nueva y registrar tus QRs otra vez, pero no podrás retirar los registros hechos con la clave perdida.</p></details>
+      <details class="explicacion"><summary>El navegador me advierte que el certificado no es seguro</summary>
+        <p>Pasa en la prueba por red local, que usa un certificado propio. En la versión publicada el sitio tiene un certificado válido.</p></details>
+    </section>
+  </main>
+</body>
+</html>

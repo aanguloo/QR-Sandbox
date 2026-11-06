@@ -21,6 +21,7 @@ LIMITES_POR_TIPO = {
     "formulario_password": 5,
     "descarga_bloqueada": 10,
     "marca_detectada": 20,
+    "permiso_solicitado": 4,
     "captura": 120,
     "error": 10,
     "fin": 1,

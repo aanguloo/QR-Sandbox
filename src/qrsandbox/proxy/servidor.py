@@ -24,7 +24,7 @@ import time
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
 
-from qrsandbox.proxy.politica import motivo_bloqueo
+from qrsandbox.proxy.politica import motivo_bloqueo, politica_con_laboratorio
 
 MAX_CABECERAS = 16_384  # bytes de la petición inicial (anti-DoS)
 TIMEOUT_CABECERAS_S = 10
@@ -186,8 +186,9 @@ async def servir(host: str = "0.0.0.0", puerto: int = 3128, proxy: ProxyEgreso |
 
 async def _main() -> None:
     puerto = int(os.environ.get("PROXY_PUERTO", "3128"))
-    servidor = await servir(puerto=puerto)
-    registrar(accion="inicio", puerto=puerto)
+    laboratorio = os.environ.get("PROXY_LAB") or None  # solo en el Experimento 2
+    servidor = await servir(puerto=puerto, proxy=ProxyEgreso(politica=politica_con_laboratorio(laboratorio)))
+    registrar(accion="inicio", puerto=puerto, laboratorio=laboratorio)
     async with servidor:
         await servidor.serve_forever()
 

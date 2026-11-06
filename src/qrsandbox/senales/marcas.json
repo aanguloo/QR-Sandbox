@@ -521,6 +521,257 @@
    "textos": [
     "FedEx"
    ]
+  },
+  {
+   "nombre": "DocuSign",
+   "clave": "docusign",
+   "dominios": [
+    "docusign.com",
+    "docusign.net"
+   ],
+   "textos": [
+    "DocuSign"
+   ]
+  },
+  {
+   "nombre": "Western Union",
+   "clave": "westernunion",
+   "dominios": [
+    "westernunion.com",
+    "wu.com"
+   ],
+   "textos": [
+    "Western Union"
+   ]
+  },
+  {
+   "nombre": "Roblox",
+   "clave": "roblox",
+   "dominios": [
+    "roblox.com",
+    "rbxcdn.com"
+   ],
+   "textos": [
+    "Roblox"
+   ]
+  },
+  {
+   "nombre": "Steam",
+   "clave": "steamcommunity",
+   "dominios": [
+    "steamcommunity.com",
+    "steampowered.com",
+    "steamstatic.com"
+   ],
+   "textos": [
+    "Steam Community",
+    "Steam"
+   ]
+  },
+  {
+   "nombre": "Binance",
+   "clave": "binance",
+   "dominios": [
+    "binance.com"
+   ],
+   "textos": [
+    "Binance"
+   ]
+  },
+  {
+   "nombre": "Coinbase",
+   "clave": "coinbase",
+   "dominios": [
+    "coinbase.com"
+   ],
+   "textos": [
+    "Coinbase"
+   ]
+  },
+  {
+   "nombre": "MetaMask",
+   "clave": "metamask",
+   "dominios": [
+    "metamask.io"
+   ],
+   "textos": [
+    "MetaMask"
+   ]
+  },
+  {
+   "nombre": "Spotify",
+   "clave": "spotify",
+   "dominios": [
+    "spotify.com",
+    "scdn.co"
+   ],
+   "textos": [
+    "Spotify"
+   ]
+  },
+  {
+   "nombre": "Uber",
+   "clave": "uber",
+   "dominios": [
+    "uber.com",
+    "ubereats.com"
+   ],
+   "textos": [
+    "Uber"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Rappi",
+   "clave": "rappi",
+   "dominios": [
+    "rappi.cl",
+    "rappi.com"
+   ],
+   "textos": [
+    "Rappi"
+   ]
+  },
+  {
+   "nombre": "PedidosYa",
+   "clave": "pedidosya",
+   "dominios": [
+    "pedidosya.cl",
+    "pedidosya.com"
+   ],
+   "textos": [
+    "PedidosYa"
+   ]
+  },
+  {
+   "nombre": "Entel",
+   "clave": "entel",
+   "dominios": [
+    "entel.cl"
+   ],
+   "textos": [
+    "Entel"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Movistar",
+   "clave": "movistar",
+   "dominios": [
+    "movistar.cl",
+    "movistar.com"
+   ],
+   "textos": [
+    "Movistar"
+   ]
+  },
+  {
+   "nombre": "WOM",
+   "clave": "wom",
+   "dominios": [
+    "wom.cl"
+   ],
+   "textos": [
+    "WOM"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Claro",
+   "clave": "clarochile",
+   "dominios": [
+    "clarochile.cl",
+    "claro.cl"
+   ],
+   "textos": [
+    "Claro Chile"
+   ]
+  },
+  {
+   "nombre": "VTR",
+   "clave": "vtr",
+   "dominios": [
+    "vtr.com",
+    "vtr.cl"
+   ],
+   "textos": [
+    "VTR"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Líder",
+   "clave": "lider",
+   "dominios": [
+    "lider.cl"
+   ],
+   "textos": [
+    "Lider.cl"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Jumbo",
+   "clave": "jumbo",
+   "dominios": [
+    "jumbo.cl"
+   ],
+   "textos": [
+    "Jumbo.cl"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Paris",
+   "clave": "paris",
+   "dominios": [
+    "paris.cl"
+   ],
+   "textos": [
+    "Paris.cl"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Copec",
+   "clave": "copec",
+   "dominios": [
+    "copec.cl"
+   ],
+   "textos": [
+    "Copec"
+   ]
+  },
+  {
+   "nombre": "Fonasa",
+   "clave": "fonasa",
+   "dominios": [
+    "fonasa.cl",
+    "fonasa.gob.cl"
+   ],
+   "textos": [
+    "Fonasa"
+   ]
+  },
+  {
+   "nombre": "Comisaría Virtual",
+   "clave": "comisariavirtual",
+   "dominios": [
+    "comisariavirtual.cl"
+   ],
+   "textos": [
+    "Comisaría Virtual"
+   ]
+  },
+  {
+   "nombre": "TAG / Autopase",
+   "clave": "autopase",
+   "dominios": [
+    "autopase.cl"
+   ],
+   "textos": [
+    "Autopase"
+   ]
   }
  ]
 }

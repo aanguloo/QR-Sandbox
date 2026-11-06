@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>Bucle JS</title>
+<script>
+// Redirección infinita por JavaScript (además de /bucle, que lo hace por HTTP 302).
+const n = Number(new URLSearchParams(location.search).get('n') || 0);
+setTimeout(() => { location.replace('/bucle_js.html?n=' + (n + 1)); }, 50);
+</script>

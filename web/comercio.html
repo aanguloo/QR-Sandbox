@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4fd1">
+  <title>Panel de comercio · QR-Sandbox</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/img/icono-192.png">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <script src="/static/vendor/leaflet/leaflet.js" defer></script>
+  <script src="/static/vendor/qrcode.js" defer></script>
+  <script type="module" src="/static/js/comercio.js"></script>
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">QR<span>·</span>Sandbox</a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/">Escanear</a>
+      <a href="/comercio" aria-current="page">Comercio</a>
+      <a href="/log">Log</a>
+      <a href="/ayuda">Ayuda</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Registra los QR de tu local</h1>
+    <p class="bajada">Si alguien pega un sticker encima de tu QR, quien lo escanee verá una alerta. Tu clave privada se crea y se queda en este dispositivo.</p>
+    <details class="explicacion tarjeta">
+      <summary>¿Para qué sirve esto?</summary>
+      <p>Imagina una cafetería con un QR en cada mesa para pagar. Un estafador pega encima su propio QR, que lleva a una página falsa recién creada que se ve idéntica a la real. Como esa página es nueva, ninguna lista de sitios peligrosos la conoce todavía.</p>
+      <p>Si el dueño registra aquí su QR (a dónde lleva y dónde está pegado), cuando alguien escanee un QR <em>distinto</em> en ese mismo lugar le aparecerá: «⚠️ posible sticker encima del original».</p>
+      <p>Tu <strong>clave</strong> es como tu firma: solo quien la tiene puede registrar o retirar QRs a tu nombre. Se guarda en este teléfono o computador; descarga un respaldo y guárdalo bien.</p>
+    </details>
+
+    <section class="tarjeta pila" id="seccion-clave">
+      <h2>1. Tu clave de firma</h2>
+      <div id="estado-clave" aria-live="polite"></div>
+      <div class="fila">
+        <button class="primario" id="boton-generar" type="button">Crear clave</button>
+        <button id="boton-exportar" type="button" disabled>Descargar respaldo</button>
+        <label class="boton" for="archivo-respaldo">Importar respaldo</label>
+        <input class="oculto" id="archivo-respaldo" type="file" accept="application/json,.json">
+      </div>
+      <p class="pequeno">El respaldo contiene tu clave privada: guárdalo en un lugar seguro. Si lo pierdes, no podrás revocar tus QRs.</p>
+    </section>
+
+    <section class="tarjeta pila" id="seccion-registro">
+      <h2>2. Registrar un QR</h2>
+      <form id="form-registro" class="pila">
+        <div>
+          <label for="url-destino">Enlace del QR</label>
+          <input id="url-destino" type="url" required placeholder="https://mi-local.cl/carta">
+        </div>
+        <div>
+          <label for="descripcion">Descripción (pública)</label>
+          <input id="descripcion" type="text" maxlength="200" required placeholder="Carta, mesa 4">
+        </div>
+        <div>
+          <label>Ubicación del QR (toca el mapa)</label>
+          <div class="mapa" id="mapa"></div>
+          <div class="fila"><button id="boton-mi-ubicacion" type="button">Usar mi ubicación</button>
+            <span class="pequeno" id="coordenadas">Sin ubicación</span></div>
+        </div>
+        <div>
+          <label for="radio">Radio: <span id="radio-valor">30</span> m</label>
+          <input id="radio" type="range" min="5" max="500" step="5" value="30">
+        </div>
+        <button class="primario" type="submit" id="boton-registrar" disabled>Firmar y registrar</button>
+      </form>
+      <div id="mensaje-registro" aria-live="polite"></div>
+      <div id="resultado-registro" class="pila oculto"></div>
+    </section>
+
+    <section class="tarjeta pila">
+      <h2>3. Mis QRs registrados</h2>
+      <p class="pequeno">Revocar retira el QR del registro (por ejemplo, si cambiaste de enlace). La revocación también queda en el log.</p>
+      <div id="mis-qrs"></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -24,6 +24,9 @@ PESOS: dict[str, int] = {
     "typosquatting_marca": 45,
     "marca_en_dominio_ajeno": 35,
     "punycode": 15,
+    # rastreo y permisos
+    "rastreador_ip": 40,  # el enlace pasa por un "IP logger"
+    "permiso_sensible": 20,  # la página pidió ubicación, cámara, micrófono o notificaciones
     # forma de la URL
     "userinfo_arroba": 35,
     "ip_literal": 30,

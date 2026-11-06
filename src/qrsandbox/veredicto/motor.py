@@ -58,9 +58,15 @@ def evaluar(
     listas: ListasNegras | None = None,
 ) -> dict:
     marcas = marcas if marcas is not None else cargar_marcas()
+    iniciales = estatico.hallazgos
+    final_https = bool(analisis and analisis.resultado and analisis.resultado.url_final
+                       and analisis.resultado.url_final.startswith("https://"))
+    if final_https:
+        # "http://sitio" que redirige a https es normal: lo que importa es el destino final.
+        iniciales = [h for h in iniciales if h.codigo != "sin_https"]
     todos = (
         senales_log(consulta_log)
-        + estatico.hallazgos
+        + iniciales
         + (estatico_final.hallazgos if estatico_final else [])
         + senales_dinamicas(analisis, marcas, listas.es_popular if listas else None)
     )

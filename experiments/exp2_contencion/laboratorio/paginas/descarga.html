@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>Descarga</title><h1>Descarga</h1>
+<script>
+
+// Fuerza la descarga de un .apk (como las falsas 'actualizaciones').
+const a = document.createElement('a'); a.href = '/archivo.apk'; a.download = 'actualizacion.apk'; document.body.append(a); a.click();
+</script>

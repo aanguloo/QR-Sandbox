@@ -71,3 +71,23 @@ def motivo_bloqueo(ip_texto: str, puerto: int) -> str | None:
     except ValueError:
         return "ip_invalida"
     return motivo_bloqueo_ip(ip)
+
+
+def politica_con_laboratorio(laboratorio: str | None):
+    """Política para el Experimento 2: igual a la normal, pero permite EXACTAMENTE un
+    destino interno (`ip:puerto` del servidor de páginas hostiles propias).
+
+    Solo se activa con la variable PROXY_LAB (el compose del experimento la define); en
+    uso normal es `motivo_bloqueo` sin cambios. Nunca abre rangos, solo un ip:puerto.
+    """
+    if not laboratorio:
+        return motivo_bloqueo
+    ip_lab, _, puerto_lab = laboratorio.rpartition(":")
+    destino = (str(ipaddress.ip_address(ip_lab)), int(puerto_lab))
+
+    def politica(ip_texto: str, puerto: int) -> str | None:
+        if (ip_texto, puerto) == destino:
+            return None
+        return motivo_bloqueo(ip_texto, puerto)
+
+    return politica

@@ -174,7 +174,8 @@ Se desarrolla en `docs/modelo-de-amenaza.md` (Fase 7).
 CLAUDE.md, README.md, PROMPT_QR-Sandbox.md (especificación)
 Makefile, docker-compose.yml, pyproject.toml, .env.example
 src/qrsandbox/
-  api/          API FastAPI (sin acceso a Docker); log.py = endpoints /log/...
+  api/          API FastAPI (sin acceso a Docker): main.py (rutas + páginas), analisis.py
+                (análisis en segundo plano + SSE), seguridad.py (CSP, anti-CSRF, límite), log.py
   orquestador/  único que controla Docker: ejecutor (perfiles), lector + filtro (tainted,
                 anti-DoS), recodificador (frames en proceso aislado), seccomp_worker.json
   worker/       Playwright; solo carga páginas; eventos JSON por stdout
@@ -186,9 +187,12 @@ src/qrsandbox/
   veredicto/    motor.py: puntaje 0–100, estado, razones y resumen en lenguaje simple
   comun/        esquemas pydantic compartidos
 docker/<componente>/Dockerfile   una imagen por componente
-web/static/     frontend (Fase 5)
+web/            index.html, analisis.html, comercio.html, log.html, sw.js, manifest
+web/static/     css/, js/ (comun, cripto, escanear, analisis, comercio, explorador), vendor/
+                (jsQR, Leaflet, qrcode-generator, con VENDOR.md), img/
 tests/          pytest
-experiments/    scripts + results/*.csv + figures/ (Fase 6)
+experiments/    README.md, exp1_deteccion/, exp2_contencion/ (laboratorio + escape + inundador),
+                exp3_sticker/, results/*.csv, figures/*.png
 docs/           modelo de amenaza, diagramas, informe (Fase 7)
 scripts/        utilidades (auditor del log, demo, etc.)
 ```
@@ -201,7 +205,9 @@ Docker + internet), `make lint`, `make dev` (API local sin Docker), `make build-
 `make seccomp` (regenera el perfil seccomp del worker), `make listas` (snapshot de listas
 negras en `data/listas/`), `make auditar [ARGS=--completo]`
 (auditor del log; también `--entre A B` y `--clave-comercio K`),
-`make up` / `make down` / `make logs` / `make ps` (docker compose).
+`make up` / `make down` / `make logs` / `make ps` (docker compose), `make lan` (HTTPS en la red
+local, puerto 8443, para el celular; imprime los comandos de Windows necesarios),
+`make exp1` / `make exp2` / `make exp3` (experimentos; ver `experiments/README.md`).
 
 ## 9. Plan de fases y estado
 
@@ -214,8 +220,8 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | 2 | Endurecimiento + proxy anti-SSRF + validación tainted + eventos | 127.0.0.1, 169.254.169.254, 10.0.0.1 y redirección a IP privada bloqueados; JSON malformado/gigante rechazado | dom 8 – lun 9-nov | ✅ 6-nov (adelantada) |
 | 3 | QR Transparency Log (Merkle RFC 6962, Ed25519, endpoints, auditor) | tests de inclusión/consistencia; firma inválida rechazada; hoja alterada en BD hace fallar la verificación | mar 10 – mié 11-nov | ✅ 6-nov (adelantada) |
 | 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | ✅ 6-nov (adelantada) |
-| 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | pendiente |
-| 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | pendiente |
+| 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | 🟡 6-nov: todo listo y probado en Chromium real (móvil emulado); falta probar en un celular físico |
+| 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | 🟡 6-nov: Exp. 2 y 3 hechos; Exp. 1 con piloto, corrida final ~14-nov (necesita snapshots de varios días) |
 | 7 | Materiales: README, modelo de amenaza, diagramas, borrador de informe | documentos completos | mar 17-nov | pendiente |
 | 8 | Demo Cloudflare Tunnel, código de acceso, fallback gVisor, video | desde un celular con datos móviles: URL → código → escanear → análisis en vivo | mar 17 – mié 18-nov | pendiente |
 | — | Holgura, ensayo de la presentación, revisión final | — | mié 18-nov | — |
@@ -379,6 +385,70 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   ID") no cuentan como suplantación. **Falso positivo real encontrado:** github.com/login daba
   `peligroso` 75 (contraseña + "Continue with Google"); tras el arreglo, github.com/login y
   login.microsoftonline.com quedan `sin_alertas` (25: contraseña + palabra «login»).
+- **(F5)** Análisis asíncrono: `POST /analisis` → 202 con un id de 128 bits (actúa como
+  capacidad; `?esperar=true` responde al terminar, para scripts/experimentos). El orquestador
+  transmite NDJSON (eventos validados + frames ya re-codificados + resultado) y la API re-valida
+  cada línea y la publica por SSE (`/analisis/{id}/eventos`: `evento`, `estatico`, `frame`,
+  `fin`, `fallo`; "error" se evitó porque choca con el evento de EventSource). Se guardan los
+  eventos (≤600) para poder reconectar, pero solo el ÚLTIMO frame (un cliente lento se salta
+  frames). Almacén en memoria de 200 análisis; nunca descarta uno en curso.
+- **(F5)** Seguridad web (`api/seguridad.py`, middleware ASGI puro para no romper el SSE): CSP
+  `default-src 'none'` + `script-src/style-src 'self'` sin inline ni eval, `img-src` solo
+  propio + `blob:` + teselas OSM, `frame-ancestors 'none'` + `X-Frame-Options: DENY`,
+  `nosniff`, `Referrer-Policy strict-origin-when-cross-origin` (OSM exige Referer; los enlaces
+  al destino usan `rel=noreferrer`), Permissions-Policy, COOP/CORP. Anti-CSRF en POST:
+  cabecera `X-QRSandbox-CSRF: 1` + `Content-Type: application/json` + `Origin` igual al host.
+  Límite de análisis por IP (`LIMITE_ANALISIS_POR_MIN`=10, ráfaga 5) y ≤100 SSE simultáneos.
+- **(F5)** Frontend sin framework ni CDN (la CSP lo impide): librerías alojadas con versión y
+  sha256 en `web/static/vendor/VENDOR.md`. Todo texto externo con `el()`/`textContent`; un test
+  prohíbe innerHTML/outerHTML/insertAdjacentHTML/document.write/eval/new Function en nuestro JS
+  y scripts/estilos/handlers inline en el HTML. Frames del sandbox: `Blob` con `type:
+  "image/jpeg"` → `blob:` URL; la captura final desde `/analisis/{id}/captura`.
+- **(F5)** `cripto.js` es espejo de `merkle.py`/`registro.py` (canónico, Ed25519 WebCrypto,
+  verificación RFC 9162) y se prueba con **Node** contra vectores de Python (CT, 210 pruebas de
+  inclusión y 190 de consistencia, firmas cruzadas JS↔Python). URL del registro: el navegador
+  pide `POST /log/normalizar` antes de firmar (el `URL` de JS normaliza distinto).
+- **(F5)** Clave del comercio: `generateKey` Ed25519 extraíble solo para permitir el respaldo; se
+  guarda como CryptoKey en IndexedDB; sale del dispositivo únicamente al descargar el respaldo.
+  Explorador y panel fijan la clave del log (TOFU) en localStorage y el explorador guarda el
+  último STH para verificar en cada visita que el log solo creció (como un monitor de CT).
+- **(F5)** **Revocación**: hoja `qrtlog-revocacion-v1` {clave_publica, indice, motivo,
+  timestamp} firmada por la MISMA clave del registro; no se puede revocar dos veces, ni una
+  revocación, ni algo inexistente. Los revocados no cuentan al escanear (`revocados_cercanos`
+  se informa aparte). El auditor completo verifica que cada revocación sea de la clave dueña.
+  Migración automática de logs anteriores (columnas `tipo`, `revoca`).
+- **(F5)** **Anti-replay (hallazgo):** al probar la revocación apareció que reenviar la
+  solicitud firmada original reactivaría un QR revocado. Ahora una solicitud con la misma firma
+  se rechaza siempre ("registro repetido").
+- **(F5)** `sin_https` solo cuenta si el destino FINAL es http (`http://github.com` redirige a
+  https y daba un falso positivo).
+- **(F5)** Celular por red local: cámara, WebCrypto y geolocalización exigen contexto seguro →
+  `make lan` (cert autofirmado ECDSA con SAN de las IPs de WSL y Windows, 30 días, clave 0644
+  por ser desechable y para que la lea el UID 10001). WSL2 está en modo NAT: hace falta un
+  `netsh portproxy` + regla de firewall en Windows (el script solo los imprime). La subida de
+  imagen y el pegado de enlace funcionan incluso sin HTTPS.
+- **(F5)** PWA: manifest + service worker "red primero" que solo cachea la interfaz (nunca
+  análisis ni datos del log).
+- **(F6)** Fotos paso a paso: la API guarda hasta 8 frames clave por análisis (primero, el
+  siguiente a cada navegación/redirección, uno cada 2,5 s, y la captura final), servidos en
+  `/analisis/{id}/fotos/{n}` (image/jpeg, nosniff) y anunciados por SSE (`foto`). Almacén
+  reducido a 100 análisis por la memoria. El cliente ignora eventos repetidos al reconectar
+  (`lastEventId`).
+- **(F6)** Explicaciones para no expertos en `web/static/js/explicaciones.js` (una por código de
+  hallazgo; un test exige que no falte ninguna), recuadro "Qué hacer ahora", "¿Qué estoy
+  viendo?" y página `/ayuda` (tutorial, sin JS).
+- **(F6)** Señales nuevas: `rastreador_ip` (+40; lista de IP loggers de mejor esfuerzo en
+  `senales/rastreadores.json`, se revisa cada salto de la cadena) y `permiso_sensible` (+20;
+  el worker envuelve geolocalización, getUserMedia y Notification ANTES de que corra la
+  página, avisa por un binding y niega; nuevo evento cerrado `permiso_solicitado`). 23 marcas
+  nuevas (DocuSign, Western Union, Roblox, telcos y comercios chilenos…: 66 en total).
+- **(F6)** Experimento 2: el proxy admite `PROXY_LAB=ip:puerto` (UNA excepción exacta, solo con
+  el compose del experimento) para alcanzar el laboratorio local. "basico" corre como root
+  (default de Docker). Pruebas destructivas en contenedores separados porque con gVisor
+  exceder la memoria termina el sandbox entero. `make up` usa `--remove-orphans`.
+- **(F6)** Experimento 1: veredictos calculados fuera de la API para controlar qué listas se
+  usan (separación temporal: solo snapshots anteriores a la fecha de las maliciosas).
+  **No ajustar señales con el conjunto de prueba.**
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -458,3 +528,31 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   `make test-int` **23 passed** (incluye whois real). Con el stack: bancoestado.cl
   `sin_alertas` con edad 9930 días (whois) y Tranco #7848; github.com/login y
   login.microsoftonline.com `sin_alertas`.
+- **6-nov — Fase 5:** web completa (`/`, `/analisis/{id}`, `/comercio`, `/log`), análisis en
+  vivo por SSE, seguridad web, revocación + anti-replay, `make lan`. Verificación: `make test`
+  **308 passed** (incluye `cripto.js` con Node contra Python, CSP/CSRF, reglas sobre el JS/HTML,
+  SSE, frames no-JPEG descartados, revocación). `make test-int` **25 passed**, entre ellos en
+  **Chromium real**: (a) aceptación XSS: un `<title>` con `<script>` y `<img onerror>` y una
+  URL con `<script>` se ven como texto, `window.__xss` queda indefinido, 0 imgs inyectadas, 0
+  diálogos, y las 4 páginas cargan sin violaciones de CSP ni errores de JS; (b) recorrido del
+  comercio: crear clave → clic en el mapa → firmar y registrar (recibo verificado en el
+  navegador) → escaneo en ese lugar "✅ Verificado… comprobado en tu navegador" → explorador
+  (firma del STH, inclusión, firma del comercio) → revocar → el explorador confirma solo
+  "1 → 2". Con el stack real (gVisor): `http://github.com` → 14 frames en vivo + veredicto.
+  Capturas en móvil emulado (Pixel 7) revisadas. **Pendiente:** probar en un celular físico
+  (requiere los comandos de Windows de `make lan`). **Ojo demo:** el log real tiene 5
+  registros de prueba de la Fase 3 en la Plaza de Armas (a0.cl, b0.cl…) que hacen que
+  cualquier escaneo ahí salga "no coincide"; limpiar antes de la demo (`docker compose down -v`
+  borra el log y su clave).
+- **6-nov — Fase 6 (en curso):** pedido del usuario: fotos paso a paso, explicaciones para no
+  expertos y página de ayuda; además rastreadores de IP, permisos sensibles y marcas nuevas
+  (verificado con phishing real: una página falsa de DocuSign pasó a `peligroso` 100 por
+  marca en dominio y en título). `make test` **320 passed**, `make test-int` **25 passed**.
+  Experimentos (ver `experiments/README.md`): **Exp. 3** completo (100 % de stickers y 0 falsas
+  alertas con GPS σ ≤ 20 m; zona densa + GPS σ 80 m + radio 10 m: 31 % falsas alertas; latencia
+  lineal, 4 ms con 2000 entradas). **Exp. 2** completo (matriz de 17 intentos × 3 perfiles,
+  páginas hostiles, arranque ~380 ms igual en los tres, worker inundador cortado en 0,5 s).
+  Hallazgos: gVisor termina el sandbox entero por OOM, oculta el kernel, deja ~1,8 núcleos
+  pese al límite de 1 CPU; `ptrace`/`unshare` "permitidos" pero contenidos en el Sentry.
+  **Exp. 1**: scripts listos y piloto 8+8 (B y C: recall 0,5, 0 FP; los FN fueron `*.pages.dev`
+  aleatorios). **Pendiente:** correr `make listas` a diario hasta ~14-nov y luego `make exp1`.

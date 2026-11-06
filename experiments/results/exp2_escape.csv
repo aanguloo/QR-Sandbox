@@ -1,0 +1,52 @@
+perfil,prueba,bloqueado,contenido,detalle
+basico,"reservar 1,5 GB de memoria",False,False,reservó 1500 MB
+basico,fork bomb (hasta 1500 procesos),False,False,creó 1500 procesos
+basico,escribir en el sistema de archivos raíz,False,False,se pudo escribir en /usr
+basico,llenar /tmp con 200 MB,False,False,escribió 200 MB
+basico,acaparar CPU con 4 procesos,False,False,obtuvo ~3.3 núcleos
+basico,ptrace (inspeccionar procesos),False,False,permitido
+basico,unshare: crear user namespace,True,False,PermissionError: [Errno 1] Operation not permitted
+basico,mount (montar un sistema de archivos),True,False,Operation not permitted
+basico,socket crudo (CAP_NET_RAW),False,False,permitido
+basico,volverse root (setuid 0),False,False,ya corre como root
+basico,io_uring (superficie de exploits del kernel),True,False,Operation not permitted
+basico,ver el kernel del anfitrión,False,False,"Linux version 6.6.87.2-microsoft-standard-WSL2 (root@439a258ad544) (gcc (GCC) 11.2.0, GNU ld (GNU Binutils) 2.37) #1 SMP"
+basico,socket de Docker,True,False,no existe en el contenedor
+basico,internet directo (1.1.1.1:443),True,False,Network is unreachable
+basico,metadatos de la nube (169.254.169.254),True,False,Network is unreachable
+basico,anfitrión vía gateway (172.31.250.1:22),True,False,Connection refused
+basico,proxy de salida (172.31.250.2:3128),False,False,"conectó (esperado: es la única salida, y filtra destinos)"
+endurecido,"reservar 1,5 GB de memoria",True,False,matado por el límite de memoria (OOM) tras 400 MB
+endurecido,fork bomb (hasta 1500 procesos),True,False,se detuvo en 255 procesos (Resource temporarily unavailable)
+endurecido,escribir en el sistema de archivos raíz,True,False,OSError: [Errno 30] Read-only file system: '/usr/qrsandbox-escape'
+endurecido,llenar /tmp con 200 MB,True,False,se detuvo en 128 MB (No space left on device)
+endurecido,acaparar CPU con 4 procesos,True,False,obtuvo ~1.0 núcleos
+endurecido,ptrace (inspeccionar procesos),True,False,EPERM
+endurecido,unshare: crear user namespace,True,False,PermissionError: [Errno 1] Operation not permitted
+endurecido,mount (montar un sistema de archivos),True,False,Operation not permitted
+endurecido,socket crudo (CAP_NET_RAW),True,False,PermissionError: [Errno 1] Operation not permitted
+endurecido,volverse root (setuid 0),True,False,PermissionError: [Errno 1] Operation not permitted
+endurecido,io_uring (superficie de exploits del kernel),True,False,Operation not permitted
+endurecido,ver el kernel del anfitrión,False,False,"Linux version 6.6.87.2-microsoft-standard-WSL2 (root@439a258ad544) (gcc (GCC) 11.2.0, GNU ld (GNU Binutils) 2.37) #1 SMP"
+endurecido,socket de Docker,True,False,no existe en el contenedor
+endurecido,internet directo (1.1.1.1:443),True,False,Network is unreachable
+endurecido,metadatos de la nube (169.254.169.254),True,False,Network is unreachable
+endurecido,anfitrión vía gateway (172.31.250.1:22),True,False,Connection refused
+endurecido,proxy de salida (172.31.250.2:3128),False,False,"conectó (esperado: es la única salida, y filtra destinos)"
+gvisor,"reservar 1,5 GB de memoria",True,False,"el contenedor completo fue terminado (código 137, OOMKilled=True)"
+gvisor,fork bomb (hasta 1500 procesos),True,False,"el contenedor completo fue terminado (código 137, OOMKilled=True)"
+gvisor,escribir en el sistema de archivos raíz,True,False,PermissionError: [Errno 13] Permission denied: '/usr/qrsandbox-escape'
+gvisor,llenar /tmp con 200 MB,True,False,se detuvo en 128 MB (No space left on device)
+gvisor,acaparar CPU con 4 procesos,False,False,obtuvo ~1.7 núcleos
+gvisor,ptrace (inspeccionar procesos),False,True,"permitido, pero dentro del kernel de gVisor (no llega al anfitrión)"
+gvisor,unshare: crear user namespace,False,True,"permitido, pero dentro del kernel de gVisor (no llega al anfitrión)"
+gvisor,mount (montar un sistema de archivos),True,False,Operation not permitted
+gvisor,socket crudo (CAP_NET_RAW),True,False,PermissionError: [Errno 1] Operation not permitted
+gvisor,volverse root (setuid 0),True,False,OSError: [Errno 22] Invalid argument
+gvisor,io_uring (superficie de exploits del kernel),True,False,Function not implemented
+gvisor,ver el kernel del anfitrión,True,False,Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016
+gvisor,socket de Docker,True,False,no existe en el contenedor
+gvisor,internet directo (1.1.1.1:443),True,False,Network is unreachable
+gvisor,metadatos de la nube (169.254.169.254),True,False,Network is unreachable
+gvisor,anfitrión vía gateway (172.31.250.1:22),True,False,Connection refused
+gvisor,proxy de salida (172.31.250.2:3128),False,False,"conectó (esperado: es la única salida, y filtra destinos)"

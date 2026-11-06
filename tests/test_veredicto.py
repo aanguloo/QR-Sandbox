@@ -88,3 +88,13 @@ def test_hallazgos_repetidos_cuentan_una_vez():
 def test_unir_es():
     assert unir_es(["a"]) == "a"
     assert unir_es(["a", "b", "c"]) == "a, b y c"
+
+
+def test_http_que_redirige_a_https_no_cuenta_como_sin_cifrar():
+    a = analisis(url_inicial="http://github.com/", url_final="https://github.com/",
+                 cadena_redirecciones=["http://github.com/", "https://github.com/"],
+                 titulo="GitHub", formularios_password=0)
+    assert evaluar(analizar_url("http://github.com/"), analisis=a)["puntaje"] == 0
+    a_http = analisis(url_inicial="http://x.cl/", url_final="http://x.cl/",
+                      cadena_redirecciones=["http://x.cl/"], titulo="x", formularios_password=0)
+    assert "sin_https" in {r["codigo"] for r in evaluar(analizar_url("http://x.cl/"), analisis=a_http)["razones"]}

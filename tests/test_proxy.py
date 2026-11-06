@@ -192,3 +192,16 @@ def test_cabeceras_gigantes_se_rechazan():
     peticion = b"GET http://a.cl/ HTTP/1.1\r\nX: " + b"A" * 20_000 + b"\r\n\r\n"
     codigo, _ = con_proxy(lambda p: peticion_cruda(p, peticion))
     assert codigo == 431
+
+
+def test_excepcion_de_laboratorio_es_exacta():
+    """Experimento 2: solo el ip:puerto del laboratorio; el resto de lo interno sigue bloqueado."""
+    from qrsandbox.proxy.politica import politica_con_laboratorio
+
+    assert politica_con_laboratorio(None) is motivo_bloqueo
+    p = politica_con_laboratorio("172.31.250.20:8080")
+    assert p("172.31.250.20", 8080) is None
+    assert p("172.31.250.20", 80) == "privada"  # mismo host, otro puerto: bloqueado
+    assert p("172.31.250.21", 8080) == "puerto_no_permitido"
+    assert p("172.31.250.20", 443) == "privada"
+    assert p("169.254.169.254", 80) == "link_local_metadatos"
