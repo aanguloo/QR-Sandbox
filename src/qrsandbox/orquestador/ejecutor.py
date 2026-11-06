@@ -12,9 +12,9 @@ import time
 import uuid
 from dataclasses import dataclass
 
+import docker
 from docker.errors import APIError, ImageNotFound, NotFound
 
-import docker
 from qrsandbox.comun.esquemas import EvCaptura, EvFin, ResultadoAnalisis, ResultadoWorker
 from qrsandbox.orquestador.lector import LectorEventos
 

@@ -215,8 +215,8 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | — | Holgura, ensayo de la presentación, revisión final | — | mié 18-nov | — |
 
 **Riesgos de calendario**
-- `runsc` (gVisor) aún no está instalado (Docker solo tiene `runc` y `nvidia`) → necesario en Fase 2.
-- gVisor puede no funcionar en WSL2 → fallback a `runc` endurecido (documentado como limitación).
+- ~~gVisor en WSL2~~ resuelto el 6-nov: `runsc` funciona sobre Docker Engine nativo en WSL2.
+  El fallback a `runc` endurecido se implementa igual (Fase 2/8) por si falla en la demo.
 - URLs de feeds de phishing caen rápido → recolectar el dataset temprano (idealmente durante la Fase 4).
 - **Recortes posibles si falta tiempo:** Exp. 1 con ~300+300 URLs; screencast a menor fps;
   explorador del log con verificación de consistencia simplificada.
@@ -261,6 +261,10 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   `/analisis/{id}/captura` como `image/jpeg` + `nosniff`. Persistencia en SQLite más adelante.
   Nota: la especificación dice `image/png` para capturas; usamos JPEG en todo el pipeline
   (screencast y captura final) para tener un solo formato que validar.
+- **(F1)** Motor Docker: **Docker Engine nativo en la distro Ubuntu de WSL2** (no Docker Desktop),
+  porque Docker Desktop corre el daemon en su propia VM y no permite registrar `runsc`.
+  gVisor instalado desde su repo apt + `runsc install` (`/etc/docker/daemon.json`).
+  El socket ahora es `root:docker`.
 
 ## 11. Registro de estado
 
@@ -278,3 +282,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   error controlado). De punta a punta por compose: `POST /analisis` OK en ~3,4 s, captura
   `image/jpeg` 34 KB, orquestador inaccesible desde el host. `http://github.com` → evento de
   redirección a https y 2 dominios de terceros. Imagen del worker: 1,27 GB.
+- **6-nov — gVisor:** cambio a Docker Engine nativo en WSL2 + `runsc`. `docker run
+  --runtime=runsc alpine dmesg` muestra "Starting gVisor...". `make test-int` pasa con
+  `WORKER_RUNTIME=runc` y `=runsc`; compose con `runsc` OK de punta a punta. Primer dato de
+  overhead (1 análisis de example.com, no es una medición): runc ~3,1 s vs runsc ~4,3–4,6 s.

@@ -6,9 +6,9 @@ Corre en una red Docker interna sin puertos publicados; solo la API lo alcanza.
 
 from contextlib import asynccontextmanager
 
+import docker
 from fastapi import FastAPI
 
-import docker
 from qrsandbox.comun.esquemas import ResultadoAnalisis, SolicitudAnalisis
 from qrsandbox.orquestador.ejecutor import ejecutar, limpiar_huerfanos
 

@@ -37,3 +37,7 @@ markers = ["integracion: requiere Docker, la imagen del worker y acceso a intern
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint.isort]
+# La carpeta docker/ (Dockerfiles) confunde a isort: el SDK `docker` es de terceros.
+known-third-party = ["docker"]
