@@ -174,12 +174,13 @@ Se desarrolla en `docs/modelo-de-amenaza.md` (Fase 7).
 CLAUDE.md, README.md, PROMPT_QR-Sandbox.md (especificación)
 Makefile, docker-compose.yml, pyproject.toml, .env.example
 src/qrsandbox/
-  api/          API FastAPI (sin acceso a Docker)
+  api/          API FastAPI (sin acceso a Docker); log.py = endpoints /log/...
   orquestador/  único que controla Docker: ejecutor (perfiles), lector + filtro (tainted,
                 anti-DoS), recodificador (frames en proceso aislado), seccomp_worker.json
   worker/       Playwright; solo carga páginas; eventos JSON por stdout
   proxy/        proxy de salida anti-SSRF (politica.py = reglas de IP, servidor.py)
-  tlog/         QR Transparency Log (Merkle, Ed25519, pruebas)
+  tlog/         QR Transparency Log: merkle.py (RFC 9162), registro.py (formato canónico +
+                Ed25519), log.py (SQLite append-only, STH, consulta), auditor.py
   senales/      señales estáticas
   veredicto/    motor de veredicto + explicación
   comun/        esquemas pydantic compartidos
@@ -196,7 +197,8 @@ scripts/        utilidades (auditor del log, demo, etc.)
 `make help` lista todo. Principales: `make test` (unitarios), `make test-int` (integración:
 Docker + internet), `make lint`, `make dev` (API local sin Docker), `make build-worker`,
 `make analizar URL=...` (CLI del orquestador, guarda `data/capturas/ultima.jpg`),
-`make seccomp` (regenera el perfil seccomp del worker),
+`make seccomp` (regenera el perfil seccomp del worker), `make auditar [ARGS=--completo]`
+(auditor del log; también `--entre A B` y `--clave-comercio K`),
 `make up` / `make down` / `make logs` / `make ps` (docker compose).
 
 ## 9. Plan de fases y estado
@@ -208,7 +210,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | 0 | Base: CLAUDE.md, estructura, compose, Makefile, README, `/health` | `make up` levanta la API y `/health` responde | vie 6-nov | ✅ 6-nov |
 | 1 | Worker Playwright + orquestador (1 contenedor por análisis) | `https://example.com` → JSON válido; el contenedor desaparece | sáb 7-nov | ✅ 6-nov (adelantada) |
 | 2 | Endurecimiento + proxy anti-SSRF + validación tainted + eventos | 127.0.0.1, 169.254.169.254, 10.0.0.1 y redirección a IP privada bloqueados; JSON malformado/gigante rechazado | dom 8 – lun 9-nov | ✅ 6-nov (adelantada) |
-| 3 | QR Transparency Log (Merkle RFC 6962, Ed25519, endpoints, auditor) | tests de inclusión/consistencia; firma inválida rechazada; hoja alterada en BD hace fallar la verificación | mar 10 – mié 11-nov | pendiente |
+| 3 | QR Transparency Log (Merkle RFC 6962, Ed25519, endpoints, auditor) | tests de inclusión/consistencia; firma inválida rechazada; hoja alterada en BD hace fallar la verificación | mar 10 – mié 11-nov | ✅ 6-nov (adelantada) |
 | 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | pendiente |
 | 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | pendiente |
 | 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | pendiente |
@@ -295,6 +297,30 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   gancho para el SSE de la Fase 5.
 - **(F2)** Para los tests de redirección externa se usa `httpbin.dev` (httpbin.org y
   httpbingo.org responden 403 a `redirect-to` hacia IPs privadas).
+- **(F3)** **Formato canónico del registro** (lo que firma el comercio y debe reproducir el
+  navegador en la Fase 5): JSON con claves en orden alfabético, separadores `,` y `:` sin
+  espacios, UTF-8 sin escapar no-ASCII. Campos: `clave_publica` (Ed25519 cruda, base64),
+  `descripcion` (≤200, sin control), `lat_e6`/`lon_e6` (enteros, microgrados: los floats se
+  serializan distinto en Python y JS), `radio_m` (5–500), `timestamp` (s Unix, ±10 min del
+  servidor), `url_destino` (ya normalizada, si no se rechaza), `v="qrtlog-registro-v1"`
+  (separación de dominio). Firma Ed25519 en base64. Hashes en hex.
+- **(F3)** Hoja = JSON canónico de `{registro, firma, t_log_ms}`: el log compromete también el
+  momento en que lo aceptó. STH firmado sobre `{v:"qrtlog-sth-v1", tamano, raiz(hex),
+  timestamp_ms}`. Se firma un STH tras **cada** inserción (sin MMD) y se guarda el historial,
+  así cualquier par de tamaños se puede auditar.
+- **(F3)** SQLite con triggers anti UPDATE/DELETE, pero la garantía es criptográfica: pruebas y
+  verificación se calculan **desde los datos crudos**, nunca desde el hash guardado. El log vive
+  en el proceso de la API (volumen `datos` en `/data`, único lugar escribible; clave del log
+  `0600`). Riesgo aceptado: si la API se compromete, el atacante puede firmar STHs falsos;
+  eso es exactamente lo que detectan los auditores (bifurcación / historial reescrito).
+- **(F3)** Consulta al escanear: ubicación redondeada a 3 decimales (~110 m) en el servidor y no
+  guardada; coincidencia si distancia ≤ `radio_m` + 100 m de margen. Estados: `verificado`
+  (misma URL normalizada, con prueba de inclusión), `no_coincide` (registros cercanos con otro
+  destino → posible sticker), `sin_registro`. Si hay coincidencia y además otros destinos
+  cercanos, gana `verificado` (dos QRs legítimos en el mismo local). Limitación: no hay
+  revocación (un comercio que cambia su QR deja el viejo en el log); se discute en el informe.
+- **(F3)** Duplicados (misma clave, URL, coordenadas y radio) se rechazan: evita inflar el log
+  reenviando una solicitud firmada.
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -340,3 +366,17 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   worker sin proxy no navega; re-codificador como UID 65534 sin grupos y sin acceso al socket).
   Muestra (2 corridas, example.com, no es medición): basico ~3,0 s, endurecido ~3,2 s,
   gvisor ~4,4 s; arranque del contenedor ~200 ms; re-codificación ~20–27 ms/frame.
+- **6-nov — Fase 3:** QR Transparency Log completo: `tlog/merkle.py`, `tlog/registro.py`,
+  `tlog/log.py`, `tlog/auditor.py`, `api/log.py` (`/log/clave-publica`, `/log/sth`,
+  `/log/sth/{n}`, `/log/registros` GET/POST, `/log/registros/{i}`, `/log/prueba-inclusion`,
+  `/log/prueba-consistencia`, `/log/consultar`, `/log/por-clave`) y `scripts/auditor.py`.
+  Verificación: `make test` **215 passed**. El árbol reproduce los vectores oficiales de CT
+  (8 raíces + ruta de inclusión) y pasa pruebas exhaustivas de inclusión/consistencia para
+  tamaños 1–40 con pruebas adulteradas. Aceptación: firma inválida, registro alterado tras
+  firmar y suplantación de clave → rechazados; hoja modificada en la BD (quitando el trigger)
+  → `verificar_integridad` falla, la prueba de inclusión no verifica contra el STH firmado y
+  el auditor completo alerta (raíz y firma). El auditor además detecta log bifurcado con la
+  misma clave, log que se achica y cambio de clave. Con el stack real: registro → reinicio de
+  la API (persistencia OK) → `auditor.py --completo` y `--entre 1 5` OK; `/data` 0700 y la
+  clave 0600. Nota: el volumen `datos` quedó con 5 registros de prueba; `docker compose down -v`
+  reinicia el log (borra también la clave del log).

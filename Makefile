@@ -7,7 +7,7 @@ PORT  ?= 8000
 STAMP := $(VENV)/.instalado
 
 .DEFAULT_GOAL := help
-.PHONY: help venv dev test test-int lint seccomp build-worker up down logs ps analizar clean
+.PHONY: help venv dev test test-int lint seccomp build-worker up down logs ps analizar auditar clean
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
@@ -54,6 +54,9 @@ ps: ## Estado de los servicios
 
 analizar: $(STAMP) up ## Analiza una URL desde la terminal: make analizar URL=https://example.com
 	$(PY) -m qrsandbox.orquestador "$(URL)" --captura data/capturas/ultima.jpg
+
+auditar: $(STAMP) ## Audita el QR Transparency Log de la API local (ARGS=--completo)
+	$(PY) scripts/auditor.py $(ARGS)
 
 clean: ## Borra .venv y cachés
 	rm -rf $(VENV) .pytest_cache .ruff_cache src/*.egg-info

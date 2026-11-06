@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import ValidationError
 
 from qrsandbox import __version__
+from qrsandbox.api.log import router as router_log
 from qrsandbox.comun.esquemas import ResultadoAnalisis, SolicitudAnalisis
 
 ORQUESTADOR_URL = os.environ.get("ORQUESTADOR_URL", "http://127.0.0.1:9000")
@@ -25,6 +26,7 @@ _ID_VALIDO = re.compile(r"^[0-9a-f]{12}$")
 # docs_url/redoc_url desactivados: no exponemos la UI de Swagger (scripts de
 # terceros desde CDN) en un servicio que se publicará por un túnel en la demo.
 app = FastAPI(title="QR-Sandbox", version=__version__, docs_url=None, redoc_url=None)
+app.include_router(router_log)  # QR Transparency Log (Fase 3)
 
 # Fase 1: capturas en memoria (LRU acotado). La persistencia llega con SQLite.
 _capturas: OrderedDict[str, bytes] = OrderedDict()
