@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Entorno y datos locales (pueden contener secretos o capturas de phishing)
+.env
+data/
+*.sqlite
+*.db
+
+# Windows / WSL
+*:Zone.Identifier
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

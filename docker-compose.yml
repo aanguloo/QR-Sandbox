@@ -1,0 +1,71 @@
+# Fase 1: API + orquestador. Los workers NO son servicios de compose: el
+# orquestador crea uno por análisis y lo destruye al terminar.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: qrsandbox-api:dev
+    # Por defecto solo se publica en loopback; API_BIND=0.0.0.0 se habilita
+    # explícitamente para probar desde el celular por la red local (Fase 5).
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8000}:8000"
+    environment:
+      ORQUESTADOR_URL: http://orquestador:9000
+    networks: [publica, interna]
+    depends_on:
+      orquestador:
+        condition: service_healthy
+    # Endurecimiento básico (también aplica a la API, no solo al worker).
+    # NUNCA montar /var/run/docker.sock aquí: equivale a root en el host.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  orquestador:
+    build:
+      context: .
+      dockerfile: docker/orquestador/Dockerfile
+    image: qrsandbox-orquestador:dev
+    # Único servicio con el socket de Docker (separación de privilegios).
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WORKER_IMAGEN: ${WORKER_IMAGEN:-qrsandbox-worker:dev}
+      WORKER_RUNTIME: ${WORKER_RUNTIME:-runc}
+      WORKER_RED: ${WORKER_RED:-bridge}
+      MAX_WORKERS: ${MAX_WORKERS:-3}
+    # Solo en la red interna y sin puertos publicados: solo la API lo alcanza.
+    networks: [interna]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2).status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  publica: {}
+  # internal: sin salida a internet. El orquestador no necesita red externa
+  # (habla con el daemon por el socket).
+  interna:
+    internal: true
