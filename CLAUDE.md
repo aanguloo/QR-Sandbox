@@ -193,7 +193,8 @@ web/static/     css/, js/ (comun, cripto, escanear, analisis, comercio, explorad
 tests/          pytest
 experiments/    README.md, exp1_deteccion/, exp2_contencion/ (laboratorio + escape + inundador),
                 exp3_sticker/, results/*.csv, figures/*.png
-docs/           modelo de amenaza, diagramas, informe (Fase 7)
+docs/           informe.md (+ informe.pdf), modelo-de-amenaza.md, guion-demo.md,
+                diagramas/*.mmd (+ .png/.svg generados)
 scripts/        utilidades (auditor del log, demo, etc.)
 ```
 
@@ -222,7 +223,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | ✅ 6-nov (adelantada) |
 | 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | 🟡 6-nov: todo listo y probado en Chromium real (móvil emulado); falta probar en un celular físico |
 | 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | 🟡 6-nov: Exp. 2 y 3 hechos; Exp. 1 con piloto, corrida final ~14-nov (necesita snapshots de varios días) |
-| 7 | Materiales: README, modelo de amenaza, diagramas, borrador de informe | documentos completos | mar 17-nov | pendiente |
+| 7 | Materiales: README, modelo de amenaza, diagramas, borrador de informe | documentos completos | mar 17-nov | 🟡 6-nov: borrador completo (9 págs. en PDF); falta la sección del Exp. 1 (~14-nov) y la revisión del usuario |
 | 8 | Demo Cloudflare Tunnel, código de acceso, fallback gVisor, video | desde un celular con datos móviles: URL → código → escanear → análisis en vivo | mar 17 – mié 18-nov | 🟡 6-nov: hecha y probada por internet (Chromium móvil emulado); falta probar con un celular real con datos móviles y grabar el video |
 | — | Holgura, ensayo de la presentación, revisión final | — | mié 18-nov | — |
 
@@ -470,6 +471,14 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   navegador usa SSE y, si en 2,5 s no llega nada, cambia solo a **sondeo**
   (`/analisis/{id}/progreso` cada 0,7 s + `/analisis/{id}/frame`, image/jpeg). Por el túnel, la
   línea de tiempo aparece a los ~4,7 s. En local y en la red local sigue siendo SSE.
+- **(F7)** Informe en Markdown (`docs/informe.md`) con PDF generado por `scripts/informe_pdf.py`
+  (Markdown → HTML → Chromium de la imagen del worker; informa el nº de páginas). Diagramas en
+  Mermaid (`docs/diagramas/*.mmd`, GitHub los muestra) renderizados a PNG/SVG con
+  `scripts/render_diagramas.py` (mermaid 11.4.1 en `data/herramientas/`, no versionado). En
+  Python-Markdown una lista necesita una línea en blanco antes (GitHub no): el informe la tiene.
+- **(F7)** Medición agregada al Exp. 2 (pedida por la especificación): costo de la vista previa
+  (`costo_frames.py`): re-codificación aislada mediana 14 ms/frame (6–32), 1,6 % de la duración,
+  15–390 KB de imágenes por análisis.
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -572,8 +581,8 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   Experimentos (ver `experiments/README.md`): **Exp. 3** completo (100 % de stickers y 0 falsas
   alertas con GPS σ ≤ 20 m; zona densa + GPS σ 80 m + radio 10 m: 31 % falsas alertas; latencia
   lineal, 4 ms con 2000 entradas). **Exp. 2** completo (matriz de 17 intentos × 3 perfiles,
-  páginas hostiles, arranque ~380 ms igual en los tres, worker inundador cortado en 0,5 s).
-  Hallazgos: gVisor termina el sandbox entero por OOM, oculta el kernel, deja ~1,8 núcleos
+  páginas hostiles, arranque ~370 ms igual en los tres, worker inundador cortado en 0,5 s).
+  Hallazgos: gVisor termina el sandbox entero por OOM, oculta el kernel, deja ~1,7 núcleos
   pese al límite de 1 CPU; `ptrace`/`unshare` "permitidos" pero contenidos en el Sentry.
   **Exp. 1**: scripts listos y piloto 8+8 (B y C: recall 0,5, 0 FP; los FN fueron `*.pages.dev`
   aleatorios). **Pendiente:** correr `make listas` a diario hasta ~14-nov y luego `make exp1`.
@@ -587,3 +596,11 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   código → análisis → línea de tiempo y vista previa a los 4,7 s, veredicto a los 13,3 s,
   5 fotos, 0 errores de JS. Guion de la demo y del video: `docs/guion-demo.md`.
   **Pendiente:** prueba con un celular real con datos móviles y grabar el video de respaldo.
+- **6-nov — Fase 7 (borrador):** `docs/modelo-de-amenaza.md` (9 activos, 6 fronteras, 4
+  adversarios, 18 amenazas con mitigación + archivo + evidencia, supuestos, riesgos residuales),
+  3 diagramas (arquitectura con fronteras de confianza, flujo de un análisis, log de
+  transparencia), `docs/informe.md` + `docs/informe.pdf` (9 páginas A4; sección 4.3 del Exp. 1
+  marcada como pendiente con su diseño y el piloto) y README con reproducción desde cero
+  (Docker Engine + gVisor en WSL2). Cifras corregidas con los CSV finales (arranque 366–370 ms,
+  CPU básico ~3,3 y gVisor ~1,7 núcleos). **Pendiente:** completar 4.3 tras `make exp1` y que el
+  usuario revise el informe.

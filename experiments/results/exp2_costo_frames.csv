@@ -1,0 +1,13 @@
+url,duracion_ms,frames,recodificacion_ms_total,recodificacion_ms_por_frame,frames_rechazados,kb_frames,kb_salida_worker,error
+https://example.com,3367,2,63.0,31.5,0,42.9,50.0,
+https://github.com,6233,9,89.3,9.9,0,120.1,133.1,
+https://es.wikipedia.org/wiki/C%C3%B3digo_QR,4205,5,70.3,14.1,0,262.7,365.0,
+https://www.bancoestado.cl,3163,2,48.8,24.4,0,14.7,19.4,
+https://www.emol.com,5863,10,85.0,8.5,0,369.0,447.4,
+https://www.sii.cl,3146,4,64.2,16.1,0,144.1,159.7,
+https://example.com,3309,3,53.9,18.0,0,81.5,89.7,
+https://github.com,7980,14,85.3,6.1,0,260.3,269.2,
+https://es.wikipedia.org/wiki/C%C3%B3digo_QR,3557,5,61.0,12.2,0,227.7,310.9,
+https://www.bancoestado.cl,3095,2,46.3,23.1,0,14.7,19.4,
+https://www.emol.com,5676,10,80.3,8.0,0,388.1,467.3,
+https://www.sii.cl,3093,4,58.7,14.7,0,144.1,159.7,

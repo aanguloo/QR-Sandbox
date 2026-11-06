@@ -6,18 +6,63 @@ dispositivo del usuario: se analiza en un sandbox desechable y se contrasta con
 un **QR Transparency Log** (inspirado en Certificate Transparency) para detectar
 stickers superpuestos sobre QRs legítimos.
 
-> Estado: Fases 0–5 y 8 terminadas; Fase 6 (experimentos) casi lista y Fase 7 (informe) pendiente: sandbox endurecido con gVisor
-> y anti-SSRF, QR Transparency Log con revocación, señales y veredicto explicado, aplicación web
-> con análisis en vivo, fotos paso a paso y ayuda. Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
-> seguridad y el plan de fases. La especificación completa está en
-> [PROMPT_QR-Sandbox.md](PROMPT_QR-Sandbox.md).
+**Documentos:** [informe](docs/informe.md) ([PDF](docs/informe.pdf)) ·
+[modelo de amenaza](docs/modelo-de-amenaza.md) · [diagramas](docs/diagramas/) ·
+[experimentos](experiments/README.md) · [guion de la demo](docs/guion-demo.md) ·
+[decisiones y estado (CLAUDE.md)](CLAUDE.md) · [especificación](PROMPT_QR-Sandbox.md)
 
-## Requisitos
+![Arquitectura](docs/diagramas/arquitectura.png)
 
-- Python 3.12 con `venv` (`sudo apt install python3.12-venv` en Ubuntu/WSL)
-- Docker Engine + docker compose instalados **dentro de Ubuntu (WSL2)**, con el runtime
-  `runsc` de gVisor (no Docker Desktop: no permite registrar gVisor; ver CLAUDE.md)
-- `make`
+## Reproducir desde cero
+
+Probado en Windows 11 + WSL2 (Ubuntu 24.04) con Docker Engine 29 y gVisor. En Linux nativo
+los pasos son los mismos, salvo el punto 1.
+
+**1. Docker Engine dentro de Ubuntu (WSL2).** Docker Desktop no sirve: corre el daemon en su
+propia VM y no permite registrar gVisor. Si lo tienes, desactiva su integración WSL para
+Ubuntu (Settings → Resources → WSL integration) y ejecuta `wsl --shutdown` en PowerShell.
+Luego, en Ubuntu:
+```bash
+sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg python3.12-venv make
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list
+sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER   # cerrar y volver a abrir la terminal
+```
+
+**2. gVisor (`runsc`).** Es opcional: sin gVisor, el sistema usa runc endurecido y lo informa.
+```bash
+curl -fsSL https://gvisor.dev/archive.key | sudo gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" \
+  | sudo tee /etc/apt/sources.list.d/gvisor.list
+sudo apt-get update && sudo apt-get install -y runsc && sudo runsc install && sudo systemctl restart docker
+docker run --rm --runtime=runsc alpine dmesg   # debe decir "Starting gVisor..."
+```
+
+**3. El proyecto.**
+```bash
+git clone https://github.com/aanguloo/QR-Sandbox.git && cd QR-Sandbox
+make test        # crea .venv, instala dependencias y corre los tests unitarios
+make listas      # snapshot de listas negras y de Tranco (para las señales y el Exp. 1)
+make up          # construye las imágenes y levanta API + orquestador + proxy
+```
+Abre <http://127.0.0.1:8000>. Para verificar todo, incluido Chromium real, corre `make test-int`
+(necesita Docker e internet).
+
+**4. Experimentos y materiales.**
+```bash
+make exp3        # sticker superpuesto (~30 s)
+make exp2        # contención (~15 min; levanta y quita el laboratorio local)
+make exp1        # detección (1–2 h; necesita snapshots de varios días: make listas a diario)
+.venv/bin/python scripts/render_diagramas.py   # docs/diagramas/*.png
+.venv/bin/python scripts/informe_pdf.py        # docs/informe.pdf
+```
+
+**Requisitos en resumen:** Python 3.12 con `venv`, `make`, Docker Engine + compose (dentro de
+Ubuntu si usas WSL2), gVisor opcional y Node.js opcional (solo para el test del JS de
+verificación).
 
 ## Probar en el celular (red local)
 
