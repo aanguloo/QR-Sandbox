@@ -42,10 +42,15 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Descarga snapshots de listas públicas")
     p.add_argument("--dir", type=Path, default=Path("data/listas"))
     p.add_argument("--sin-tranco", action="store_true", help="no bajar Tranco (10 MB)")
+    p.add_argument("--si-falta-hoy", action="store_true",
+                   help="no hacer nada si ya existe el snapshot de hoy (para la tarea programada)")
     args = p.parse_args()
     snapshots = args.dir / "snapshots"
     snapshots.mkdir(parents=True, exist_ok=True)
-    hoy = datetime.now(UTC).strftime("%Y-%m-%d")
+    hoy = datetime.now(UTC).strftime("%Y-%m-%d")  # fechas en UTC, siempre
+    if args.si_falta_hoy and (snapshots / f"urls-openphish-{hoy}.txt").exists():
+        print(f"{datetime.now(UTC):%Y-%m-%d %H:%M} UTC: ya existe el snapshot de {hoy}, nada que hacer")
+        return 0
     errores = 0
     with httpx.Client(timeout=120, follow_redirects=True,
                       headers={"User-Agent": "QR-Sandbox (proyecto academico)"}) as http:

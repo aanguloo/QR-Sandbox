@@ -6,16 +6,100 @@ dispositivo del usuario: se analiza en un sandbox desechable y se contrasta con
 un **QR Transparency Log** (inspirado en Certificate Transparency) para detectar
 stickers superpuestos sobre QRs legítimos.
 
-> Estado: Fases 0–5 (base, sandbox endurecido + anti-SSRF, QR Transparency Log con revocación,
-> señales + veredicto explicado, aplicación web con análisis en vivo). Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
+> Estado: Fases 0–5 terminadas y Fase 6 (experimentos) casi lista: sandbox endurecido con gVisor
+> y anti-SSRF, QR Transparency Log con revocación, señales y veredicto explicado, aplicación web
+> con análisis en vivo, fotos paso a paso y ayuda. Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
 > seguridad y el plan de fases. La especificación completa está en
 > [PROMPT_QR-Sandbox.md](PROMPT_QR-Sandbox.md).
 
 ## Requisitos
 
 - Python 3.12 con `venv` (`sudo apt install python3.12-venv` en Ubuntu/WSL)
-- Docker + docker compose (en WSL2: activar la integración WSL en Docker Desktop)
+- Docker Engine + docker compose instalados **dentro de Ubuntu (WSL2)**, con el runtime
+  `runsc` de gVisor (no Docker Desktop: no permite registrar gVisor; ver CLAUDE.md)
 - `make`
+
+## Probar en el celular (red local)
+
+La cámara, la ubicación y la firma del panel de comercio solo funcionan con **HTTPS**, así
+que para usar la app desde el celular hay que levantarla en "modo red local" (`make lan`),
+que usa HTTPS en el puerto **8443** con un certificado propio.
+
+### Cada vez que quieras probar
+
+1. En la terminal de Ubuntu (WSL):
+   ```bash
+   cd ~/QR-Sandbox && make lan
+   ```
+   Al final muestra la **IP de WSL** (dentro de `connectaddress=...`) y los comandos de Windows.
+2. **¿Reiniciaste Windows desde la última vez?** La IP de WSL cambia al reiniciar. En
+   PowerShell revisa a dónde apunta el reenvío actual:
+   ```powershell
+   netsh interface portproxy show v4tov4
+   ```
+   Si la dirección de la columna "Conectar a" no es la que mostró `make lan`, actualízala
+   (PowerShell **como administrador**; reemplaza `<IP de WSL>`):
+   ```powershell
+   netsh interface portproxy delete v4tov4 listenport=8443 listenaddress=0.0.0.0
+   netsh interface portproxy add v4tov4 listenport=8443 listenaddress=0.0.0.0 connectport=8443 connectaddress=<IP de WSL>
+   ```
+3. En el celular, **conectado a la misma Wi-Fi** que el notebook (no con datos móviles), abre:
+   ```
+   https://192.168.100.7:8443
+   ```
+   Aparecerá una advertencia de certificado: toca **Avanzado → Continuar**. Es esperable,
+   porque el certificado es propio de la red local.
+
+`192.168.100.7` es la IP del notebook en la Wi-Fi de la casa. Si cambias de red o el router
+le asigna otra, búscala en PowerShell con `ipconfig`, en "Adaptador de LAN inalámbrica
+Wi-Fi" → "Dirección IPv4". `make lan` también la lista entre las "candidatas".
+
+### Solo la primera vez (ya está hecho en este notebook)
+
+En PowerShell **como administrador** (clic derecho → "Ejecutar como administrador"):
+```powershell
+# 1. Marcar la Wi-Fi de la casa como red privada (si no, el firewall bloquea al celular)
+Set-NetConnectionProfile -InterfaceAlias "Wi-Fi" -NetworkCategory Private
+# 2. Reenviar el puerto 8443 de Windows a WSL (WSL2 está en modo NAT)
+netsh interface portproxy add v4tov4 listenport=8443 listenaddress=0.0.0.0 connectport=8443 connectaddress=<IP de WSL>
+# 3. Permitir el puerto en el firewall
+New-NetFirewallRule -DisplayName QR-Sandbox-LAN -Direction Inbound -Protocol TCP -LocalPort 8443 -Action Allow -Profile Private
+```
+
+### Si el celular no carga la página
+
+| Lo que pasa | Qué revisar |
+|---|---|
+| Se queda cargando hasta agotar el tiempo | Firewall: `Get-NetConnectionProfile` debe decir `Private`, y la regla `QR-Sandbox-LAN` debe existir (`Get-NetFirewallRule -DisplayName QR-Sandbox-LAN`). También revisa que el antivirus no tenga su propio firewall. |
+| "No se puede acceder al sitio" | El reenvío apunta a una IP vieja de WSL (paso 2), o `make lan` no está corriendo: en el notebook, `https://127.0.0.1:8443` debe abrir. |
+| Nada funciona | El celular debe estar en la misma Wi-Fi, sin VPN, y la IP del notebook debe ser la correcta (`ipconfig`). |
+| La cámara o "Crear clave" no funcionan | La URL debe empezar con `https://`. |
+
+Para revisar desde el notebook que todo responde:
+```powershell
+Test-NetConnection 192.168.100.7 -Port 8443   # debe decir TcpTestSucceeded : True
+```
+
+### Volver al modo normal y deshacer
+
+```bash
+make up      # vuelve a http://127.0.0.1:8000, solo en el notebook (el celular ya no entra)
+make down    # o apaga todo
+```
+Para quitar los cambios de Windows (PowerShell como administrador):
+```powershell
+netsh interface portproxy delete v4tov4 listenport=8443 listenaddress=0.0.0.0
+Remove-NetFirewallRule -DisplayName QR-Sandbox-LAN
+```
+
+### Notas
+
+- **Qué probar:** el menú **Ayuda** dentro de la app explica cada sección (escanear, leer el
+  resultado, registrar QRs como comercio, el registro público).
+- No se puede "instalar la app" (PWA) en este modo, porque el navegador exige un certificado
+  válido. En la demo pública (Fase 8) el túnel de Cloudflare da un HTTPS real.
+- Lo que registres en el panel de comercio queda en el log (append-only). El log todavía
+  tiene registros de prueba en la Plaza de Armas: si escaneas ahí, saldrá "no coincide".
 
 ## Uso rápido
 

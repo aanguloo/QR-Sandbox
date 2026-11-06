@@ -29,6 +29,13 @@ pruebas de contención usan solo páginas propias servidas localmente.
 3. `analizar.py` calcula precisión, recall, F1, tasa de falsos positivos y latencia p50/p95,
    lista los falsos negativos y falsos positivos para revisarlos uno a uno, y genera los gráficos.
 
+**Descarga diaria automática:** ejecuta una vez en PowerShell (normal, sin administrador):
+`powershell -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu\home\andre\QR-Sandbox\scripts\programar_descarga.ps1`.
+Crea la tarea de Windows "QR-Sandbox descarga diaria" (a las 10:00 y al iniciar sesión), que llama
+a `scripts/descarga_diaria.sh` y solo descarga si falta el snapshot del día. El registro queda en
+`data/listas/descargas.log`. Para quitarla:
+`Unregister-ScheduledTask -TaskName "QR-Sandbox descarga diaria" -Confirm:$false`.
+
 **Estado (6-nov):** solo hay un piloto de 8 + 8 URLs (`results/exp1_piloto_*`). La corrida
 final necesita snapshots de **varios días**: hay que correr `make listas` a diario y luego
 `make exp1` (por ejemplo, el 14-nov). Con un solo día, (A) no tiene lista previa y su recall
