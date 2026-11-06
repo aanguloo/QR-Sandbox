@@ -86,6 +86,13 @@ class ResultadoWorker(_Base):
     dominios_terceros: Annotated[list[Dominio], Field(max_length=50)]
     n_dominios_terceros: Annotated[int, Field(ge=0, le=100_000)]
     tiempo_carga_ms: Ms | None
+    # Texto visible de la página (recortado). ENTRADA DEL ATACANTE: solo se busca en él
+    # nombres de marcas; nunca se renderiza como HTML.
+    texto_visible: Annotated[str, StringConstraints(max_length=2000)] = ""
+    # Pistas de logos: "alt:<texto>", "archivo:<nombre>", "icono:<nombre>" (también tainted).
+    imagenes: Annotated[
+        list[Annotated[str, StringConstraints(max_length=160)]], Field(max_length=40)
+    ] = []
 
 
 class EvRedireccion(_Base):

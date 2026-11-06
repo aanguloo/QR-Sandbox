@@ -8,15 +8,24 @@ import base64
 import os
 import re
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
+from typing import Annotated
 
 import httpx
-from fastapi import FastAPI, HTTPException, Response
-from pydantic import ValidationError
+from fastapi import Depends, FastAPI, HTTPException, Response
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from qrsandbox import __version__
+from qrsandbox.api.log import obtener_log
 from qrsandbox.api.log import router as router_log
-from qrsandbox.comun.esquemas import ResultadoAnalisis, SolicitudAnalisis
+from qrsandbox.comun.esquemas import ResultadoAnalisis, Url
+from qrsandbox.senales.dominio import partes_host
+from qrsandbox.senales.estaticas import analizar_url
+from qrsandbox.senales.listas import ListasNegras
+from qrsandbox.senales.red import ProveedorRed, ProveedorRedReal
+from qrsandbox.tlog.log import LogTransparencia
+from qrsandbox.veredicto.motor import evaluar
 
 ORQUESTADOR_URL = os.environ.get("ORQUESTADOR_URL", "http://127.0.0.1:9000")
 TIMEOUT_ORQUESTADOR_S = 45.0
@@ -40,6 +49,42 @@ def _guardar_captura(id_analisis: str, datos: bytes) -> None:
             _capturas.popitem(last=False)
 
 
+class PeticionAnalisis(BaseModel):
+    """Lo que manda la web: el texto del QR y, opcionalmente, la ubicación aproximada."""
+
+    model_config = ConfigDict(extra="forbid")
+    url: Url
+    lat: Annotated[float | None, Field(ge=-90, le=90)] = None
+    lon: Annotated[float | None, Field(ge=-180, le=180)] = None
+
+    @model_validator(mode="after")
+    def _ambas_o_ninguna(self):
+        if (self.lat is None) != (self.lon is None):
+            raise ValueError("lat y lon van juntas")
+        return self
+
+
+_listas: ListasNegras | None = None
+_red: ProveedorRed | None = None
+
+
+def listas_negras() -> ListasNegras:
+    global _listas
+    if _listas is None:
+        _listas = ListasNegras.desde_directorio()
+    return _listas
+
+
+def proveedor_red() -> ProveedorRed | None:
+    """RDAP + TLS solo si SENALES_RED=1 (en compose). En tests y sin red: desactivado."""
+    global _red
+    if os.environ.get("SENALES_RED") != "1":
+        return None
+    if _red is None:
+        _red = ProveedorRedReal()
+    return _red
+
+
 def pedir_analisis(url: str) -> dict:
     """Llama al orquestador. Separado para poder simularlo en los tests."""
     r = httpx.post(f"{ORQUESTADOR_URL}/analizar", json={"url": url}, timeout=TIMEOUT_ORQUESTADOR_S)
@@ -54,11 +99,21 @@ def health() -> dict[str, str]:
 
 
 @app.post("/analisis")
-def crear_analisis(solicitud: SolicitudAnalisis) -> dict:
-    try:
-        crudo = pedir_analisis(solicitud.url)
-    except httpx.HTTPError:
-        raise HTTPException(status_code=503, detail="orquestador no disponible") from None
+def crear_analisis(
+    peticion: PeticionAnalisis, log: Annotated[LogTransparencia, Depends(obtener_log)]
+) -> dict:
+    url = peticion.url
+    # Señales estáticas (incluye RDAP/TLS, que tardan) EN PARALELO con el sandbox.
+    with ThreadPoolExecutor(max_workers=2) as ejecutor:
+        futuro_sandbox = ejecutor.submit(pedir_analisis, url)
+        futuro_estatico = ejecutor.submit(
+            analizar_url, url, listas=listas_negras(), red=proveedor_red()
+        )
+        try:
+            crudo = futuro_sandbox.result()
+        except httpx.HTTPError:
+            raise HTTPException(status_code=503, detail="orquestador no disponible") from None
+        estatico = futuro_estatico.result()
     try:
         # El orquestador es de confianza, pero re-validamos su respuesta de todas formas:
         # es barato y evita que un bug allá se convierta en un bug acá.
@@ -66,11 +121,27 @@ def crear_analisis(solicitud: SolicitudAnalisis) -> dict:
     except ValidationError:
         raise HTTPException(status_code=502, detail="respuesta inválida del orquestador") from None
 
+    # Si la página terminó en otro host, también se analiza estáticamente el destino final.
+    estatico_final = None
+    final = r.resultado.url_final if r.resultado else None
+    if final and partes_host(final).host != estatico.partes.host:
+        estatico_final = analizar_url(final, listas=listas_negras(), red=proveedor_red())
+
+    consulta_log = None
+    if peticion.lat is not None:
+        consulta_log = log.consultar(url, peticion.lat, peticion.lon)
+
     salida = r.model_dump(mode="json", exclude={"captura_jpeg_b64"})
     salida["captura_url"] = None
     if r.captura_jpeg_b64:
         _guardar_captura(r.id, base64.b64decode(r.captura_jpeg_b64))
         salida["captura_url"] = f"/analisis/{r.id}/captura"
+    salida["veredicto"] = evaluar(estatico, estatico_final, r, consulta_log, listas=listas_negras())
+    salida["senales_estaticas"] = {
+        "inicial": estatico.datos,
+        "final": estatico_final.datos if estatico_final else None,
+    }
+    salida["log"] = consulta_log
     return salida
 
 

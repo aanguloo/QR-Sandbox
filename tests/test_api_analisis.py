@@ -29,6 +29,20 @@ def respuesta_falsa(url: str) -> dict:
     }
 
 
+@pytest.fixture(autouse=True)
+def log_temporal(tmp_path):
+    """Nunca tocar data/tlog.sqlite real desde los tests."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from qrsandbox.api.log import obtener_log
+    from qrsandbox.tlog.log import LogTransparencia
+
+    log = LogTransparencia(tmp_path / "tlog.sqlite", Ed25519PrivateKey.generate())
+    main.app.dependency_overrides[obtener_log] = lambda: log
+    yield log
+    main.app.dependency_overrides.clear()
+
+
 @pytest.fixture
 def orquestador_falso(monkeypatch):
     monkeypatch.setattr(main, "pedir_analisis", respuesta_falsa)
@@ -73,3 +87,32 @@ def test_orquestador_caido_da_503(monkeypatch):
 
     monkeypatch.setattr(main, "pedir_analisis", caido)
     assert cliente.post("/analisis", json={"url": "https://example.com"}).status_code == 503
+
+
+def test_analisis_incluye_veredicto_y_estado_del_log(orquestador_falso, log_temporal):
+    import time
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from qrsandbox.tlog.registro import firmar_registro
+
+    log_temporal.agregar(firmar_registro(
+        Ed25519PrivateKey.generate(), url_destino="https://pagos.ejemplo.cl/mesa/4",
+        lat_e6=-33437800, lon_e6=-70650500, radio_m=30, descripcion="Mesa 4",
+        timestamp=int(time.time()),
+    ))
+    r = cliente.post("/analisis", json={"url": "https://pagos-ejemplo.xyz/mesa/4",
+                                        "lat": -33.4378, "lon": -70.6505}).json()
+    assert r["log"]["estado"] == "no_coincide"
+    v = r["veredicto"]
+    assert v["estado"] == "peligroso"  # sticker (60) + TLD .xyz (15)
+    assert v["razones"][0]["codigo"] == "log_no_coincide"
+    assert v["resumen"].startswith("Vas a pagos-ejemplo.xyz: ")
+
+    sin_ubicacion = cliente.post("/analisis", json={"url": "https://example.com"}).json()
+    assert sin_ubicacion["log"] is None
+    assert sin_ubicacion["veredicto"]["estado"] == "sin_alertas"
+
+
+def test_lat_sin_lon_se_rechaza(orquestador_falso):
+    assert cliente.post("/analisis", json={"url": "https://a.cl", "lat": 1.0}).status_code == 422

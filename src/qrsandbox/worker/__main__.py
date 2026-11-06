@@ -73,6 +73,27 @@ def dominio_base(host: str) -> str:
 
 PROXY = os.environ.get("QRS_PROXY", "")
 
+# Pistas de logos: texto alternativo y nombre de archivo de las imágenes, y el favicon.
+# Corre en la página (que puede manipular el JS): el resultado es tainted y se valida.
+JS_IMAGENES = """() => {
+  const salida = [];
+  const nombre = (u) => {
+    if (!u || u.startsWith('data:')) return '';
+    try { return new URL(u, location.href).pathname.split('/').pop().slice(0, 120); }
+    catch (e) { return ''; }
+  };
+  for (const img of Array.from(document.images).slice(0, 60)) {
+    if (img.alt) salida.push('alt:' + img.alt.slice(0, 120));
+    const n = nombre(img.currentSrc || img.src);
+    if (n) salida.push('archivo:' + n);
+  }
+  for (const l of document.querySelectorAll('link[rel~="icon"]')) {
+    const n = nombre(l.href);
+    if (n) salida.push('icono:' + n);
+  }
+  return salida.slice(0, 40);
+}"""
+
 
 async def iniciar_screencast(contexto, pagina) -> None:
     """Vista previa en vivo vía CDP (Page.startScreencast), limitada a ~2,5 fps.
@@ -200,12 +221,24 @@ async def analizar(url: str) -> None:
         await pagina.wait_for_timeout(ESPERA_POST_CARGA_MS)
 
         titulo = ""
+        texto_visible = ""
         formularios_password = 0
         try:
             titulo = (await pagina.title())[:300]
             for frame in pagina.frames:
                 formularios_password += await frame.locator("input[type=password]").count()
         except ErrorPlaywright:
+            pass
+        try:
+            texto_visible = (await pagina.inner_text("body", timeout=2_000))[:2000]
+        except ErrorPlaywright:
+            pass
+        imagenes: list[str] = []
+        try:
+            crudo = await asyncio.wait_for(pagina.evaluate(JS_IMAGENES), 2)
+            if isinstance(crudo, list):
+                imagenes = [x[:160] for x in crudo if isinstance(x, str)][:40]
+        except (ErrorPlaywright, TimeoutError):
             pass
         if formularios_password:
             emitir("formulario_password", cantidad=min(formularios_password, 1000))
@@ -238,6 +271,8 @@ async def analizar(url: str) -> None:
                 "dominios_terceros": terceros[:50],
                 "n_dominios_terceros": len(terceros),
                 "tiempo_carga_ms": tiempo_carga_ms,
+                "texto_visible": texto_visible,
+                "imagenes": imagenes,
             },
         )
         await navegador.close()

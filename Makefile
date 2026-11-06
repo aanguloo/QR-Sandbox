@@ -7,7 +7,7 @@ PORT  ?= 8000
 STAMP := $(VENV)/.instalado
 
 .DEFAULT_GOAL := help
-.PHONY: help venv dev test test-int lint seccomp build-worker up down logs ps analizar auditar clean
+.PHONY: help venv dev test test-int lint seccomp listas build-worker up down logs ps analizar auditar clean
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
@@ -39,7 +39,11 @@ seccomp: ## Regenera el perfil seccomp del worker desde el de Docker
 build-worker: ## Construye la imagen del worker (no es un servicio de compose)
 	docker build -q -t qrsandbox-worker:dev -f docker/worker/Dockerfile .
 
+listas: $(STAMP) ## Descarga un snapshot de listas negras públicas a data/listas/
+	$(PY) scripts/descargar_listas.py
+
 up: build-worker ## Construye y levanta los servicios con docker compose
+	@mkdir -p data/listas  # si no existe, Docker la crearía como root
 	docker compose up -d --build --wait
 	@curl -fsS http://127.0.0.1:$(PORT)/health && echo
 

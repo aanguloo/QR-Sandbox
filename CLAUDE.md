@@ -181,8 +181,9 @@ src/qrsandbox/
   proxy/        proxy de salida anti-SSRF (politica.py = reglas de IP, servidor.py)
   tlog/         QR Transparency Log: merkle.py (RFC 9162), registro.py (formato canónico +
                 Ed25519), log.py (SQLite append-only, STH, consulta), auditor.py
-  senales/      señales estáticas
-  veredicto/    motor de veredicto + explicación
+  senales/      dominio.py (PSL, homoglifos, sustituciones, marcas), marcas.json, hallazgos.py
+                (tabla de PESOS), estaticas.py, dinamicas.py, listas.py, red.py (RDAP/TLS)
+  veredicto/    motor.py: puntaje 0–100, estado, razones y resumen en lenguaje simple
   comun/        esquemas pydantic compartidos
 docker/<componente>/Dockerfile   una imagen por componente
 web/static/     frontend (Fase 5)
@@ -197,7 +198,8 @@ scripts/        utilidades (auditor del log, demo, etc.)
 `make help` lista todo. Principales: `make test` (unitarios), `make test-int` (integración:
 Docker + internet), `make lint`, `make dev` (API local sin Docker), `make build-worker`,
 `make analizar URL=...` (CLI del orquestador, guarda `data/capturas/ultima.jpg`),
-`make seccomp` (regenera el perfil seccomp del worker), `make auditar [ARGS=--completo]`
+`make seccomp` (regenera el perfil seccomp del worker), `make listas` (snapshot de listas
+negras en `data/listas/`), `make auditar [ARGS=--completo]`
 (auditor del log; también `--entre A B` y `--clave-comercio K`),
 `make up` / `make down` / `make logs` / `make ps` (docker compose).
 
@@ -211,7 +213,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | 1 | Worker Playwright + orquestador (1 contenedor por análisis) | `https://example.com` → JSON válido; el contenedor desaparece | sáb 7-nov | ✅ 6-nov (adelantada) |
 | 2 | Endurecimiento + proxy anti-SSRF + validación tainted + eventos | 127.0.0.1, 169.254.169.254, 10.0.0.1 y redirección a IP privada bloqueados; JSON malformado/gigante rechazado | dom 8 – lun 9-nov | ✅ 6-nov (adelantada) |
 | 3 | QR Transparency Log (Merkle RFC 6962, Ed25519, endpoints, auditor) | tests de inclusión/consistencia; firma inválida rechazada; hoja alterada en BD hace fallar la verificación | mar 10 – mié 11-nov | ✅ 6-nov (adelantada) |
-| 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | pendiente |
+| 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | ✅ 6-nov (adelantada) |
 | 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | pendiente |
 | 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | pendiente |
 | 7 | Materiales: README, modelo de amenaza, diagramas, borrador de informe | documentos completos | mar 17-nov | pendiente |
@@ -222,6 +224,14 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 - ~~gVisor en WSL2~~ resuelto el 6-nov: `runsc` funciona sobre Docker Engine nativo en WSL2.
   El fallback a `runc` endurecido se implementa igual (Fase 2/8) por si falla en la demo.
 - URLs de feeds de phishing caen rápido → recolectar el dataset temprano (idealmente durante la Fase 4).
+- **Dataset del Exp. 1 (actualizado 6-nov):** URLhaus cerró sus descargas masivas (410, exige
+  Auth-Key) y PhishTank exige registro. Fuentes usadas: OpenPhish (~300 URLs/día) y
+  Phishing.Database (enlaces nuevos del día, dominios activos ~390 mil, y un archivo de enlaces
+  activos de ~65 MB para muestrear). `make listas` guarda snapshots **con fecha** que se
+  acumulan: correrlo cada día hasta el 15-nov. **Evitar fuga en el Exp. 1:** la lista negra
+  usada en (A) debe ser un snapshot ANTERIOR a las URLs de prueba (separación temporal), si no
+  la recall de (A) es 100 % por construcción. Phishing.Database tiene ruido (incluye
+  gravatar.com, mercadolibre.com.ar, amazon.ie…): preferir OpenPhish como verdad de terreno.
 - **Recortes posibles si falta tiempo:** Exp. 1 con ~300+300 URLs; screencast a menor fps;
   explorador del log con verificación de consistencia simplificada.
 
@@ -321,6 +331,54 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   revocación (un comercio que cambia su QR deja el viejo en el log); se discute en el informe.
 - **(F3)** Duplicados (misma clave, URL, coordenadas y radio) se rechazan: evita inflar el log
   reenviando una solicitud firmada.
+- **(F4)** Motor de veredicto = **suma de pesos de una tabla fija** (`senales/hallazgos.py`),
+  sin ML: cada punto se rastrea a una razón. Puntaje acotado a 0–100; estados: ≥70
+  `peligroso`, 35–69 `sospechoso`, <35 `sin_alertas` (no "seguro": no lo podemos garantizar).
+  Cada tipo de hallazgo cuenta una vez. Resumen = "Vas a <host ASCII/punycode>: " + las 4
+  frases de mayor peso. El host se muestra en ASCII para que un homoglifo no engañe en la UI.
+- **(F4)** El log pesa: `no_coincide` +60 (solo, ya es `sospechoso`), `verificado` −40 (pero
+  no es pase libre: un phishing evidente sigue alertando).
+- **(F4)** Marcas en `senales/marcas.json` (43: bancos, servicios y courier chilenos + globales)
+  con dominios legítimos y textos. Detección en el dominio, de más a menos fuerte: homoglifos
+  (punycode cuyo esqueleto = marca), sustituciones (0→o, rn→m…), typosquatting (Levenshtein
+  ≤1–2 según largo; desactivado para claves ≤4 letras) y nombre de la marca en un dominio
+  ajeno (subcadena; solo exacta para nombres cortos como bci, sii, mach). Un hallazgo de
+  marca por URL (el más fuerte). Dominio registrable con la Public Suffix List empaquetada en
+  `tldextract` (offline, incluye sufijos privados como github.io).
+- **(F4)** Marca en la página: cuenta si está en el **título**; en el texto visible solo si
+  además hay formulario de contraseña (muchas páginas legítimas dicen "Google"). Detección de
+  logos (imagen) queda fuera de alcance: se documenta. El worker ahora envía `texto_visible`
+  (≤2000, tainted, solo se busca texto en él).
+- **(F4)** Señales con red en la **API** (es la que tiene salida a internet), opcionales con
+  `SENALES_RED=1` (compose) y timeouts de 4 s, en paralelo al sandbox. El handshake TLS va al
+  host del atacante: se aplica `proxy.politica.motivo_bloqueo` a todas las IPs resueltas y se
+  conecta a la IP validada (SNI = host), sin enviar HTTP. RDAP vía rdap.org. Limitación:
+  RDAP no cubre `.cl` (NIC Chile no está en el bootstrap de IANA) → sin edad para `.cl`.
+- **(F4)** Listas negras offline: snapshots con fecha en `data/listas/snapshots/`
+  (`urls-<fuente>-<fecha>.txt` se acumulan; `dominios-…` y `tranco-…` solo el último) y un
+  índice SQLite `data/listas/listas.sqlite` (44 MB; la API lo abre `mode=ro&immutable=1`,
+  montado de solo lectura en `/listas`). URL exacta (+90) o mismo host / dominio listado
+  (+40), salvo plataformas compartidas (vercel.app, sites.google.com…) y sitios del top 100k
+  de Tranco. Medido: 75 de los ~390 mil "dominios de phishing" de Phishing.Database están en
+  el top 100k de Tranco (gravatar.com #167, mercadolibre.com.ar, amazon.ie…).
+- **(F4)** Popularidad (Tranco top `TOP_POPULARES`=100k): en dominios populares se omiten las
+  señales de marca **débiles** (typosquatting, marca en dominio ajeno) y la de marca en la
+  página; homoglifos y sustituciones se mantienen siempre (`googll.store` está en el top 5k).
+  Costo aceptado: un phishing alojado en un sitio popular comprometido solo se detecta por
+  URL exacta en lista negra o por señales no relacionadas con marca.
+- **(F4)** Edad de dominios `.cl` vía whois de NIC Chile (`whois.nic.cl:43`; RDAP no cubre
+  .cl). El dominio se valida con `fullmatch` estricto antes de enviarlo (con `match`+`$` se
+  colaba un `\n` final: bug encontrado por los tests). NIC Chile limita la tasa de consultas:
+  la edad de un `.cl` puede faltar a veces. Subdominios de `gob.cl` no tienen edad (no son
+  registros propios en NIC).
+- **(F4)** Aproximación a "muestra el logo de X": el worker reporta `imagenes` (≤40 entradas:
+  `alt:`, `archivo:` nombre de archivo, `icono:` favicon; tainted). Cuenta **solo junto a un
+  formulario de contraseña** (íconos sociales e insignias de tiendas son comunes en sitios
+  legítimos). Reconocimiento visual del logo sigue fuera de alcance.
+- **(F4)** Menciones de inicio de sesión social ("Continue with Google", "Iniciar con Apple
+  ID") no cuentan como suplantación. **Falso positivo real encontrado:** github.com/login daba
+  `peligroso` 75 (contraseña + "Continue with Google"); tras el arreglo, github.com/login y
+  login.microsoftonline.com quedan `sin_alertas` (25: contraseña + palabra «login»).
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -380,3 +438,23 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   la API (persistencia OK) → `auditor.py --completo` y `--entre 1 5` OK; `/data` 0700 y la
   clave 0600. Nota: el volumen `datos` quedó con 5 registros de prueba; `docker compose down -v`
   reinicia el log (borra también la clave del log).
+- **6-nov — Fase 4:** señales estáticas (`senales/estaticas.py`: esquema, `@`, IP, puerto,
+  TLD, acortador, subdominios, palabras clave, homoglifos, sustitución, typosquatting, marca
+  en dominio ajeno, punycode, lista negra, edad de dominio, certificado), dinámicas
+  (`senales/dinamicas.py`: redirecciones, cambio de dominio, marca en página ajena,
+  contraseña, descarga, terceros), motor (`veredicto/motor.py`) y `scripts/descargar_listas.py`.
+  `POST /analisis` acepta `lat`/`lon` opcionales y devuelve `veredicto`, `senales_estaticas`
+  y `log`. Verificación: `make test` **257 passed** (≥1 test por señal; el ejemplo de la
+  especificación "Vas a login-micr0soft.xyz: usa un 0 en lugar de una o…" da `peligroso`
+  100; sitios legítimos no disparan marcas; TLS no conecta a IPs internas). `make test-int`
+  22 passed. Con el stack real (gVisor + RDAP + TLS): example.com y bancoestado.cl
+  `sin_alertas`; una URL de OpenPhish `peligroso` 100. Bug corregido: `partes_host` no pasaba
+  hosts Unicode a punycode. Los tests de `/analisis` ya no crean `data/tlog.sqlite` real.
+- **6-nov — Arreglos pre-Fase 5 (pedido del usuario):** (1) fuentes de listas: OpenPhish +
+  Phishing.Database + Tranco, snapshots con fecha e índice SQLite de solo lectura; (2) edad de
+  `.cl` vía whois NIC Chile; (3) pistas de logos (alt/archivo/favicon) con contraseña; (4)
+  filtro de popularidad contra falsos positivos de marca; (5) arreglo del falso positivo de
+  login social encontrado al probar github.com/login. `make test` **275 passed**,
+  `make test-int` **23 passed** (incluye whois real). Con el stack: bancoestado.cl
+  `sin_alertas` con edad 9930 días (whois) y Tranco #7848; github.com/login y
+  login.microsoftonline.com `sin_alertas`.

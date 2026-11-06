@@ -1,0 +1,526 @@
+{
+ "_comentario": "Marcas que suelen suplantarse. 'clave' = nombre que se compara con el dominio (sin espacios ni guiones). 'dominios' = dominios registrables legítimos. 'textos' = cómo aparece la marca en títulos o textos de la página. 'solo_exacta' = no buscar como subcadena (nombres cortos que darían falsos positivos). Se puede reemplazar con MARCAS_PATH.",
+ "marcas": [
+  {
+   "nombre": "BancoEstado",
+   "clave": "bancoestado",
+   "dominios": [
+    "bancoestado.cl"
+   ],
+   "textos": [
+    "BancoEstado",
+    "Banco Estado",
+    "CuentaRUT"
+   ]
+  },
+  {
+   "nombre": "Banco de Chile",
+   "clave": "bancochile",
+   "dominios": [
+    "bancochile.cl",
+    "bancoedwards.cl"
+   ],
+   "textos": [
+    "Banco de Chile",
+    "Banco Edwards"
+   ]
+  },
+  {
+   "nombre": "Santander",
+   "clave": "santander",
+   "dominios": [
+    "santander.cl",
+    "santander.com"
+   ],
+   "textos": [
+    "Santander"
+   ]
+  },
+  {
+   "nombre": "BCI",
+   "clave": "bci",
+   "dominios": [
+    "bci.cl"
+   ],
+   "textos": [
+    "Bci",
+    "BCI"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Scotiabank",
+   "clave": "scotiabank",
+   "dominios": [
+    "scotiabankchile.cl",
+    "scotiabank.cl",
+    "scotiabank.com"
+   ],
+   "textos": [
+    "Scotiabank"
+   ]
+  },
+  {
+   "nombre": "Itaú",
+   "clave": "itau",
+   "dominios": [
+    "itau.cl",
+    "itau.com"
+   ],
+   "textos": [
+    "Itaú",
+    "Itau"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Banco Falabella",
+   "clave": "bancofalabella",
+   "dominios": [
+    "bancofalabella.cl"
+   ],
+   "textos": [
+    "Banco Falabella"
+   ]
+  },
+  {
+   "nombre": "Banco Ripley",
+   "clave": "bancoripley",
+   "dominios": [
+    "bancoripley.cl"
+   ],
+   "textos": [
+    "Banco Ripley"
+   ]
+  },
+  {
+   "nombre": "Banco Security",
+   "clave": "bancosecurity",
+   "dominios": [
+    "bancosecurity.cl"
+   ],
+   "textos": [
+    "Banco Security"
+   ]
+  },
+  {
+   "nombre": "BICE",
+   "clave": "bice",
+   "dominios": [
+    "bice.cl"
+   ],
+   "textos": [
+    "Banco BICE"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Servicio de Impuestos Internos",
+   "clave": "sii",
+   "dominios": [
+    "sii.gob.cl",
+    "sii.cl"
+   ],
+   "textos": [
+    "Servicio de Impuestos Internos"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "ChileAtiende",
+   "clave": "chileatiende",
+   "dominios": [
+    "chileatiende.gob.cl"
+   ],
+   "textos": [
+    "ChileAtiende"
+   ]
+  },
+  {
+   "nombre": "Registro Civil",
+   "clave": "registrocivil",
+   "dominios": [
+    "registrocivil.cl",
+    "srcei.cl"
+   ],
+   "textos": [
+    "Registro Civil"
+   ]
+  },
+  {
+   "nombre": "ClaveÚnica",
+   "clave": "claveunica",
+   "dominios": [
+    "claveunica.gob.cl",
+    "gob.cl"
+   ],
+   "textos": [
+    "ClaveÚnica",
+    "Clave Única",
+    "Clave Unica"
+   ]
+  },
+  {
+   "nombre": "Tesorería",
+   "clave": "tgr",
+   "dominios": [
+    "tgr.cl"
+   ],
+   "textos": [
+    "Tesorería General de la República"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Mercado Pago",
+   "clave": "mercadopago",
+   "dominios": [
+    "mercadopago.cl",
+    "mercadopago.com"
+   ],
+   "textos": [
+    "Mercado Pago",
+    "MercadoPago"
+   ]
+  },
+  {
+   "nombre": "Mercado Libre",
+   "clave": "mercadolibre",
+   "dominios": [
+    "mercadolibre.cl",
+    "mercadolibre.com"
+   ],
+   "textos": [
+    "Mercado Libre",
+    "MercadoLibre"
+   ]
+  },
+  {
+   "nombre": "MACH",
+   "clave": "mach",
+   "dominios": [
+    "somosmach.com",
+    "mach.cl"
+   ],
+   "textos": [
+    "MACH"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "Tenpo",
+   "clave": "tenpo",
+   "dominios": [
+    "tenpo.cl"
+   ],
+   "textos": [
+    "Tenpo"
+   ]
+  },
+  {
+   "nombre": "Webpay",
+   "clave": "webpay",
+   "dominios": [
+    "transbank.cl",
+    "webpay.cl"
+   ],
+   "textos": [
+    "Webpay",
+    "Transbank"
+   ]
+  },
+  {
+   "nombre": "Transbank",
+   "clave": "transbank",
+   "dominios": [
+    "transbank.cl"
+   ],
+   "textos": [
+    "Transbank"
+   ]
+  },
+  {
+   "nombre": "Falabella",
+   "clave": "falabella",
+   "dominios": [
+    "falabella.com",
+    "falabella.cl",
+    "bancofalabella.cl"
+   ],
+   "textos": [
+    "Falabella"
+   ]
+  },
+  {
+   "nombre": "Ripley",
+   "clave": "ripley",
+   "dominios": [
+    "ripley.cl",
+    "ripley.com",
+    "bancoripley.cl"
+   ],
+   "textos": [
+    "Ripley"
+   ]
+  },
+  {
+   "nombre": "Correos de Chile",
+   "clave": "correoschile",
+   "dominios": [
+    "correos.cl",
+    "correoschile.cl"
+   ],
+   "textos": [
+    "Correos de Chile",
+    "CorreosChile"
+   ]
+  },
+  {
+   "nombre": "Chilexpress",
+   "clave": "chilexpress",
+   "dominios": [
+    "chilexpress.cl"
+   ],
+   "textos": [
+    "Chilexpress"
+   ]
+  },
+  {
+   "nombre": "Starken",
+   "clave": "starken",
+   "dominios": [
+    "starken.cl"
+   ],
+   "textos": [
+    "Starken"
+   ]
+  },
+  {
+   "nombre": "Blue Express",
+   "clave": "bluexpress",
+   "dominios": [
+    "blue.cl",
+    "bluex.cl"
+   ],
+   "textos": [
+    "Blue Express",
+    "Bluexpress"
+   ]
+  },
+  {
+   "nombre": "Costanera Norte",
+   "clave": "costaneranorte",
+   "dominios": [
+    "costaneranorte.cl"
+   ],
+   "textos": [
+    "Costanera Norte"
+   ]
+  },
+  {
+   "nombre": "Autopista Central",
+   "clave": "autopistacentral",
+   "dominios": [
+    "autopistacentral.cl"
+   ],
+   "textos": [
+    "Autopista Central"
+   ]
+  },
+  {
+   "nombre": "Microsoft",
+   "clave": "microsoft",
+   "dominios": [
+    "microsoft.com",
+    "microsoftonline.com",
+    "live.com",
+    "office.com",
+    "outlook.com",
+    "office365.com",
+    "sharepoint.com",
+    "azure.com",
+    "windows.net",
+    "msn.com",
+    "bing.com",
+    "microsoft365.com",
+    "msftauth.net"
+   ],
+   "textos": [
+    "Microsoft",
+    "Office 365",
+    "Outlook"
+   ]
+  },
+  {
+   "nombre": "Office 365",
+   "clave": "office365",
+   "dominios": [
+    "office.com",
+    "office365.com",
+    "microsoft.com",
+    "microsoftonline.com"
+   ],
+   "textos": [
+    "Office 365"
+   ]
+  },
+  {
+   "nombre": "Outlook",
+   "clave": "outlook",
+   "dominios": [
+    "outlook.com",
+    "live.com",
+    "microsoft.com",
+    "office.com"
+   ],
+   "textos": [
+    "Outlook"
+   ]
+  },
+  {
+   "nombre": "Google",
+   "clave": "google",
+   "dominios": [
+    "google.com",
+    "google.cl",
+    "gmail.com",
+    "youtube.com",
+    "goo.gl",
+    "googleapis.com",
+    "googleusercontent.com",
+    "gstatic.com",
+    "google.co.uk",
+    "google.com.ar",
+    "googlevideo.com",
+    "withgoogle.com"
+   ],
+   "textos": [
+    "Google",
+    "Gmail"
+   ]
+  },
+  {
+   "nombre": "Apple",
+   "clave": "apple",
+   "dominios": [
+    "apple.com",
+    "icloud.com",
+    "apple.news",
+    "mzstatic.com"
+   ],
+   "textos": [
+    "Apple ID",
+    "iCloud"
+   ]
+  },
+  {
+   "nombre": "iCloud",
+   "clave": "icloud",
+   "dominios": [
+    "icloud.com",
+    "apple.com"
+   ],
+   "textos": [
+    "iCloud"
+   ]
+  },
+  {
+   "nombre": "PayPal",
+   "clave": "paypal",
+   "dominios": [
+    "paypal.com",
+    "paypal.me",
+    "paypalobjects.com"
+   ],
+   "textos": [
+    "PayPal"
+   ]
+  },
+  {
+   "nombre": "Netflix",
+   "clave": "netflix",
+   "dominios": [
+    "netflix.com",
+    "nflxext.com",
+    "nflximg.net"
+   ],
+   "textos": [
+    "Netflix"
+   ]
+  },
+  {
+   "nombre": "Amazon",
+   "clave": "amazon",
+   "dominios": [
+    "amazon.com",
+    "amazon.cl",
+    "aws.amazon.com",
+    "amazonaws.com",
+    "amazon.co.uk",
+    "amazon.com.br",
+    "media-amazon.com"
+   ],
+   "textos": [
+    "Amazon"
+   ]
+  },
+  {
+   "nombre": "Facebook",
+   "clave": "facebook",
+   "dominios": [
+    "facebook.com",
+    "fb.com",
+    "meta.com",
+    "fbcdn.net",
+    "messenger.com"
+   ],
+   "textos": [
+    "Facebook"
+   ]
+  },
+  {
+   "nombre": "Instagram",
+   "clave": "instagram",
+   "dominios": [
+    "instagram.com"
+   ],
+   "textos": [
+    "Instagram"
+   ]
+  },
+  {
+   "nombre": "WhatsApp",
+   "clave": "whatsapp",
+   "dominios": [
+    "whatsapp.com",
+    "whatsapp.net",
+    "wa.me"
+   ],
+   "textos": [
+    "WhatsApp"
+   ]
+  },
+  {
+   "nombre": "DHL",
+   "clave": "dhl",
+   "dominios": [
+    "dhl.com",
+    "dhl.cl"
+   ],
+   "textos": [
+    "DHL"
+   ],
+   "solo_exacta": true
+  },
+  {
+   "nombre": "FedEx",
+   "clave": "fedex",
+   "dominios": [
+    "fedex.com"
+   ],
+   "textos": [
+    "FedEx"
+   ]
+  }
+ ]
+}

@@ -6,7 +6,8 @@ dispositivo del usuario: se analiza en un sandbox desechable y se contrasta con
 un **QR Transparency Log** (inspirado en Certificate Transparency) para detectar
 stickers superpuestos sobre QRs legítimos.
 
-> Estado: Fases 0–3 (base, worker/orquestador, endurecimiento + anti-SSRF, QR Transparency Log). Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
+> Estado: Fases 0–4 (base, worker/orquestador, endurecimiento + anti-SSRF, QR Transparency Log,
+> señales + veredicto explicado). Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
 > seguridad y el plan de fases. La especificación completa está en
 > [PROMPT_QR-Sandbox.md](PROMPT_QR-Sandbox.md).
 
@@ -34,6 +35,11 @@ Sin Docker: `make dev` corre la API localmente en `http://127.0.0.1:8000`.
 El perfil de aislamiento del worker se elige con `WORKER_PERFIL` en `.env`
 (`gvisor` por defecto; `endurecido`; `basico` solo para comparar). gVisor requiere
 Docker Engine con el runtime `runsc` (ver CLAUDE.md); si no está, se usa `endurecido`.
+
+`make listas` descarga snapshots con fecha (OpenPhish, Phishing.Database, Tranco) y construye
+el índice que la API consulta offline. Conviene correrlo una vez al día: las URLs se acumulan.
+`POST /analisis` acepta `lat`/`lon` opcionales para consultar el log y devuelve un
+`veredicto` con puntaje, estado y razones.
 
 El QR Transparency Log se expone en `/log/...` y se audita con
 `make auditar` (`ARGS=--completo` recalcula todo; `ARGS="--entre 1 5"` verifica la

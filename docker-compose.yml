@@ -20,9 +20,13 @@ services:
       ORQUESTADOR_URL: http://orquestador:9000
       TLOG_DB: /data/tlog.sqlite
       TLOG_CLAVE: /data/tlog_clave.pem  # clave Ed25519 del log (se crea con permisos 0600)
+      # Señales con red (RDAP + certificado TLS, con la política anti-SSRF del proxy).
+      SENALES_RED: ${SENALES_RED:-1}
+      LISTAS_DIR: /listas
     # Único lugar escribible de la API (el resto del FS es de solo lectura).
     volumes:
       - datos:/data
+      - ./data/listas:/listas:ro  # snapshot de listas negras (make listas)
     networks: [publica, interna]
     depends_on:
       orquestador:
