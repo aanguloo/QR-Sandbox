@@ -1,0 +1,27 @@
+# Demo pública (make demo): túnel de Cloudflare + código de acceso + límites estrictos.
+# El túnel corre como contenedor (no hay que instalar cloudflared) y solo alcanza a la API:
+# el orquestador y el proxy siguen en redes internas.
+services:
+  api:
+    environment:
+      DEMO_ACCESS_CODE: ${DEMO_ACCESS_CODE:?falta DEMO_ACCESS_CODE en .env (make demo lo crea)}
+      LIMITE_ANALISIS_POR_MIN: "5"   # por persona (IP real vía CF-Connecting-IP)
+      LIMITE_ANALISIS_RAFAGA: "3"
+      LIMITE_GLOBAL_POR_MIN: "20"    # entre todos
+      MAX_ANALISIS_SIMULTANEOS: "3"
+  orquestador:
+    environment:
+      MAX_WORKERS: "3"               # navegadores aislados vivos a la vez, como máximo
+
+  tunel:
+    image: cloudflare/cloudflared:2026.10.7
+    # "Quick tunnel": URL https://<algo>.trycloudflare.com aleatoria, sin cuenta. Expone SOLO la API.
+    command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "--url", "http://api:8000"]
+    networks: [publica]
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"

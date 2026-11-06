@@ -84,12 +84,18 @@ class MiddlewareSeguridad:
         cabeceras = dict(scope["headers"])
         motivo = motivo_csrf(scope["method"], cabeceras)
 
+        # Detrás del túnel la conexión del navegador es HTTPS (cloudflared nos habla en http
+        # interno y avisa con X-Forwarded-Proto): ahí se agrega HSTS.
+        https = cabeceras.get(b"x-forwarded-proto") == b"https"
+
         async def enviar(mensaje):
             if mensaje["type"] == "http.response.start":
                 existentes = {k.lower() for k, _ in mensaje.get("headers", [])}
                 mensaje["headers"] = list(mensaje.get("headers", [])) + [
                     (k, v) for k, v in CABECERAS if k not in existentes
                 ]
+                if https:
+                    mensaje["headers"].append((b"strict-transport-security", b"max-age=86400"))
             await send(mensaje)
 
         if motivo:
@@ -127,9 +133,16 @@ limite_analisis = LimiteTasa(
     por_minuto=float(os.environ.get("LIMITE_ANALISIS_POR_MIN", "10")),
     rafaga=int(os.environ.get("LIMITE_ANALISIS_RAFAGA", "5")),
 )
+# Límite para TODOS los clientes juntos (en la demo pública: 20/min). 0 = desactivado.
+_global_por_min = float(os.environ.get("LIMITE_GLOBAL_POR_MIN", "0"))
+limite_global = LimiteTasa(por_minuto=_global_por_min, rafaga=max(1, int(_global_por_min / 2))) \
+    if _global_por_min else None
 
 
 def exigir_cupo_analisis(request: Request) -> None:
-    cliente = request.client.host if request.client else "desconocido"
-    if not limite_analisis.permitir(cliente):
+    from qrsandbox.api.acceso import ip_cliente  # import tardío: acceso usa LimiteTasa
+
+    if not limite_analisis.permitir(ip_cliente(request)):
         raise HTTPException(429, "demasiados análisis: espera un momento")
+    if limite_global is not None and not limite_global.permitir("global"):
+        raise HTTPException(429, "el servicio está ocupado: intenta en un minuto")

@@ -7,7 +7,7 @@ PORT  ?= 8000
 STAMP := $(VENV)/.instalado
 
 .DEFAULT_GOAL := help
-.PHONY: help venv dev test test-int lint seccomp listas build-worker up lan down logs ps analizar auditar exp1 exp2 exp3 clean
+.PHONY: help venv dev test test-int lint seccomp listas build-worker up lan down logs ps analizar auditar exp1 exp2 exp3 demo demo-stop clean
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
@@ -49,6 +49,13 @@ up: build-worker ## Construye y levanta los servicios con docker compose
 
 lan: $(STAMP) build-worker ## Como up, pero con HTTPS en la red local para el celular (puerto 8443)
 	bash scripts/lan.sh
+
+demo: $(STAMP) build-worker ## Demo pública: túnel de Cloudflare + código de acceso + QR para la diapositiva
+	@mkdir -p data/listas
+	$(PY) scripts/demo.py
+
+demo-stop: ## Cierra el túnel de la demo y apaga todo
+	docker compose -f docker-compose.yml -f docker-compose.demo.yml down --remove-orphans
 
 down: ## Apaga los servicios
 	docker compose down

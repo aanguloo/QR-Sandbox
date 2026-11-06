@@ -4,7 +4,7 @@
 //   respaldo (acción explícita). El servidor nunca la ve: recibe registros ya firmados.
 // - Lo que se firma son los bytes canónicos del registro (mismo formato que el log en
 //   Python). El recibo que devuelve el log se verifica aquí antes de mostrarlo.
-import { $, api, descargar, el, fecha, mostrarMensaje, registrarServiceWorker, ubicacionAproximada } from "./comun.js";
+import { $, api, descargar, el, exigirAcceso, fecha, mostrarMensaje, registrarServiceWorker } from "./comun.js";
 import {
   VERSION_REGISTRO, VERSION_REVOCACION, bytesCanonicos, exportarRespaldo, firmar, generarClaves,
   importarRespaldo, leerHoja, publicaB64, soportaEd25519, verificarHoja, verificarSth,
@@ -272,6 +272,7 @@ async function revocar(indice) {
 
 async function iniciar() {
   iniciarMapa();
+  exigirAcceso($("main"));
   $("#radio").addEventListener("input", (e) => {
     $("#radio-valor").textContent = e.target.value;
     if (circulo) circulo.setRadius(Number(e.target.value));

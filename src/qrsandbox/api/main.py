@@ -12,6 +12,7 @@ import asyncio
 import base64
 import json
 import os
+import time
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +23,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from qrsandbox import __version__
 from qrsandbox.api import analisis as A
+from qrsandbox.api.acceso import exigir_acceso
+from qrsandbox.api.acceso import router as router_acceso
 from qrsandbox.api.log import obtener_log
 from qrsandbox.api.log import router as router_log
 from qrsandbox.api.seguridad import MiddlewareSeguridad, exigir_cupo_analisis
@@ -33,12 +36,15 @@ from qrsandbox.tlog.log import LogTransparencia
 WEB = Path(os.environ.get("WEB_DIR", Path(__file__).resolve().parents[3] / "web"))
 MAX_SSE = 100  # conexiones SSE simultáneas (anti-DoS)
 INTERVALO_SSE_S = 0.25
+LATIDO_SSE_S = 10
+RELLENO_SSE = int(os.environ.get("RELLENO_SSE", "2048"))  # bytes; ver comentario en eventos()
 
 # docs_url/redoc_url desactivados: no exponemos la UI de Swagger (scripts de
 # terceros desde CDN) en un servicio que se publicará por un túnel en la demo.
 app = FastAPI(title="QR-Sandbox", version=__version__, docs_url=None, redoc_url=None)
 app.add_middleware(MiddlewareSeguridad)
 app.include_router(router_log)  # QR Transparency Log (Fase 3)
+app.include_router(router_acceso)  # código de acceso de la demo pública (Fase 8)
 if (WEB / "static").is_dir():
     app.mount("/static", StaticFiles(directory=WEB / "static"), name="static")
 
@@ -96,7 +102,9 @@ def health() -> dict[str, str]:
     return {"estado": "ok", "version": __version__}
 
 
-@app.post("/analisis", status_code=202, dependencies=[Depends(exigir_cupo_analisis)])
+# Orden: primero el código de acceso (sin él no se gasta cupo), luego el límite de tasa.
+@app.post("/analisis", status_code=202,
+          dependencies=[Depends(exigir_acceso), Depends(exigir_cupo_analisis)])
 def crear_analisis(
     peticion: PeticionAnalisis,
     log: Annotated[LogTransparencia, Depends(obtener_log)],
@@ -148,16 +156,24 @@ async def eventos(id_analisis: str, request: Request) -> StreamingResponse:
         global _sse_abiertas
         _sse_abiertas += 1
         try:
-            seq, frame_visto = 0, 0
+            # Relleno inicial (comentario SSE, el navegador lo ignora): fuerza a los
+            # intermediarios (p. ej. el borde de Cloudflare en la demo) a vaciar su búfer.
+            yield ":" + " " * RELLENO_SSE + "\n\n"
+            seq, frame_visto, ultimo_envio = 0, 0, time.monotonic()
             while True:
                 if await request.is_disconnected():
                     return
+                if time.monotonic() - ultimo_envio > LATIDO_SSE_S:
+                    ultimo_envio = time.monotonic()
+                    yield ": latido\n\n"
                 if a.frame_seq != frame_visto and a.frame is not None:
                     frame_visto = a.frame_seq
                     datos = {"jpeg_b64": base64.b64encode(a.frame).decode("ascii")}
+                    ultimo_envio = time.monotonic()
                     yield f"event: frame\ndata: {json.dumps(datos)}\n\n"
                 nuevos = a.desde(seq)
                 for e in nuevos:
+                    ultimo_envio = time.monotonic()
                     seq = e.seq + 1
                     yield f"id: {e.seq}\nevent: {e.tipo}\ndata: {json.dumps(e.datos)}\n\n"
                 if a.terminado and not nuevos:
@@ -168,9 +184,35 @@ async def eventos(id_analisis: str, request: Request) -> StreamingResponse:
 
     return StreamingResponse(
         generar(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        # Tipo EXACTO "text/event-stream" (sin "; charset=utf-8", que Starlette agrega si se
+        # usa media_type): cloudflared solo vacía su búfer al instante si es exactamente ese.
+        # Con el charset, a través del túnel la línea de tiempo llegaba toda junta al final.
+        # no-transform: que ningún intermediario comprima (comprimir también junta en búfer).
+        headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-store, no-transform",
+                 "X-Accel-Buffering": "no"},
     )
+
+
+@app.get("/analisis/{id_analisis}/progreso")
+def progreso(id_analisis: str, desde: Annotated[int, Query(ge=0)] = 0) -> dict:
+    """Mismo contenido que el SSE, por sondeo (respaldo del navegador cuando un intermediario
+    retiene el SSE). Los frames no van aquí: se piden aparte en /frame (image/jpeg)."""
+    a = _analisis(id_analisis)
+    nuevos = a.desde(desde)[:200]
+    return {
+        "estado": a.estado,
+        "frame_seq": a.frame_seq,
+        "eventos": [{"seq": e.seq, "tipo": e.tipo, "datos": e.datos} for e in nuevos],
+    }
+
+
+@app.get("/analisis/{id_analisis}/frame")
+def frame_actual(id_analisis: str) -> Response:
+    a = _analisis(id_analisis)
+    if a.frame is None:
+        raise HTTPException(404, "todavía no hay imagen")
+    return Response(content=a.frame, media_type="image/jpeg",
+                    headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
 
 
 @app.get("/analisis/{id_analisis}/captura")

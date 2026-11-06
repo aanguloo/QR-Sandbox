@@ -223,7 +223,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 | 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | 🟡 6-nov: todo listo y probado en Chromium real (móvil emulado); falta probar en un celular físico |
 | 6 | Experimentos: detección, contención, sticker superpuesto + gráficos | scripts reproducibles, `results/*.csv`, `figures/` | dom 15 – lun 16-nov | 🟡 6-nov: Exp. 2 y 3 hechos; Exp. 1 con piloto, corrida final ~14-nov (necesita snapshots de varios días) |
 | 7 | Materiales: README, modelo de amenaza, diagramas, borrador de informe | documentos completos | mar 17-nov | pendiente |
-| 8 | Demo Cloudflare Tunnel, código de acceso, fallback gVisor, video | desde un celular con datos móviles: URL → código → escanear → análisis en vivo | mar 17 – mié 18-nov | pendiente |
+| 8 | Demo Cloudflare Tunnel, código de acceso, fallback gVisor, video | desde un celular con datos móviles: URL → código → escanear → análisis en vivo | mar 17 – mié 18-nov | 🟡 6-nov: hecha y probada por internet (Chromium móvil emulado); falta probar con un celular real con datos móviles y grabar el video |
 | — | Holgura, ensayo de la presentación, revisión final | — | mié 18-nov | — |
 
 **Riesgos de calendario**
@@ -449,6 +449,27 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 - **(F6)** Experimento 1: veredictos calculados fuera de la API para controlar qué listas se
   usan (separación temporal: solo snapshots anteriores a la fecha de las maliciosas).
   **No ajustar señales con el conjunto de prueba.**
+- **(F8)** Código de acceso (`api/acceso.py`): con `DEMO_ACCESS_CODE` definido, `POST /analisis`,
+  `/log/registros` y `/log/revocaciones` exigen la cookie `qrs_acceso` (HMAC-SHA256 con un
+  secreto aleatorio por arranque, vence a las 12 h, `HttpOnly; Secure; SameSite=Strict`). El
+  código se compara en tiempo constante, con 5 intentos y luego 1/min por IP. Las lecturas
+  siguen abiertas (el log es público). El anti-CSRF existente protege la cookie.
+- **(F8)** Detrás del túnel todos llegan desde la IP de cloudflared: en modo demo la IP del
+  cliente sale de `CF-Connecting-IP` (Cloudflare la sobrescribe en el borde; fuera del modo
+  demo se ignora). Límites de la demo: 5/min por persona, 20/min en total, 3 análisis y 3
+  workers simultáneos. HSTS cuando llega `X-Forwarded-Proto: https`.
+- **(F8)** El túnel es un contenedor (`cloudflare/cloudflared:2026.10.7`, sin root, solo
+  lectura, sin capabilities) en la red `publica`: solo alcanza a la API. `make demo` genera
+  el código si falta, espera la URL, comprueba que responda desde internet y genera
+  `data/demo/qr-demo.png` (segno + Pillow). El orquestador registra al arrancar el perfil
+  efectivo del worker (fallback de gVisor visible en los logs y en `aviso_runtime`).
+- **(F8)** **Hallazgo: el borde de Cloudflare (quick tunnel) retiene los primeros ~500 KB de un
+  SSE** antes de dejarlo pasar: la línea de tiempo llegaba toda junta a los ~8 s. Medido y
+  descartado como causa: el tipo de contenido (ahora exactamente `text/event-stream`, sin
+  charset), `no-transform`/`no-cache`, un relleno de 64 KB y `--protocol http2`. Solución: el
+  navegador usa SSE y, si en 2,5 s no llega nada, cambia solo a **sondeo**
+  (`/analisis/{id}/progreso` cada 0,7 s + `/analisis/{id}/frame`, image/jpeg). Por el túnel, la
+  línea de tiempo aparece a los ~4,7 s. En local y en la red local sigue siendo SSE.
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -556,3 +577,13 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   pese al límite de 1 CPU; `ptrace`/`unshare` "permitidos" pero contenidos en el Sentry.
   **Exp. 1**: scripts listos y piloto 8+8 (B y C: recall 0,5, 0 FP; los FN fueron `*.pages.dev`
   aleatorios). **Pendiente:** correr `make listas` a diario hasta ~14-nov y luego `make exp1`.
+- **6-nov — Fase 8:** demo pública con Cloudflare Tunnel (`make demo` / `make demo-stop`,
+  `docker-compose.demo.yml`, `scripts/demo.py`), código de acceso (`api/acceso.py` + formulario
+  en Escanear y Comercio), límites por persona y globales, HSTS, registro del perfil de gVisor
+  y respaldo por sondeo del canal en vivo. Verificación: `make test` **331 passed**;
+  integración web 2 passed. **Por internet** (URL pública): HTTPS + HSTS + CSP, sin código
+  401, código incorrecto 401, código correcto → cookie con HttpOnly/Secure/SameSite=Strict,
+  análisis 202, origen ajeno 403. Chromium móvil emulado por la URL pública: formulario de
+  código → análisis → línea de tiempo y vista previa a los 4,7 s, veredicto a los 13,3 s,
+  5 fotos, 0 errores de JS. Guion de la demo y del video: `docs/guion-demo.md`.
+  **Pendiente:** prueba con un celular real con datos móviles y grabar el video de respaldo.

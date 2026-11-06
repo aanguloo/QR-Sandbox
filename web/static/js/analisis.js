@@ -14,7 +14,7 @@ const MAX_TERCEROS_VISIBLES = 6;
 let urlFrame = null;
 let terceros = 0;
 let filaTerceros = null;
-let ultimoSeq = -1; // al reconectar, el servidor reenvía todo: se ignora lo ya visto
+let ultimoSeq = -1; // al reconectar o cambiar de canal se ignora lo ya visto
 const fotosVistas = new Set();
 
 const ESTADOS = {
@@ -260,37 +260,81 @@ async function alFin(r) {
   await mostrarLog(r.log);
 }
 
+// Canal en vivo: SSE primero (spec). Si en ESPERA_SSE_MS no llega nada, se cambia a sondeo:
+// algunos intermediarios retienen el SSE (medido: el borde de Cloudflare de los túneles
+// gratuitos guarda ~500 KB antes de dejarlo pasar). El sondeo pide el progreso y la imagen
+// actual cada SONDEO_MS; cada respuesta llega completa, así que nada la retiene.
+const ESPERA_SSE_MS = 2500;
+const SONDEO_MS = 700;
+let terminado = false;
+let recibioAlgo = false;
+
+function despachar(tipo, datos, seq) {
+  if (seq !== undefined && seq !== null) {
+    if (seq <= ultimoSeq) return; // ya mostrado (reconexión o cambio de canal)
+    ultimoSeq = seq;
+  }
+  recibioAlgo = true;
+  if (tipo === "evento") alEvento(datos);
+  else if (tipo === "foto") agregarFoto(datos);
+  else if (tipo === "estatico") alEstatico(datos);
+  else if (tipo === "frame") alFrame(datos);
+  else if (tipo === "fin") {
+    terminado = true;
+    $("#url-analizada").textContent = datos.url;
+    alFin(datos);
+  } else if (tipo === "fallo") {
+    terminado = true;
+    $("#punto-vivo").classList.add("oculto");
+    agregar("⚠️", `El análisis no terminó: ${datos.mensaje}`);
+  }
+}
+
+function escucharSse() {
+  const fuente = new EventSource(`/analisis/${id}/eventos`);
+  for (const tipo of ["evento", "foto", "estatico", "frame", "fin", "fallo"]) {
+    fuente.addEventListener(tipo, (e) => {
+      despachar(tipo, JSON.parse(e.data), e.lastEventId === "" ? null : Number(e.lastEventId));
+      if (terminado) fuente.close();
+    });
+  }
+  fuente.onerror = () => {
+    if (fuente.readyState === EventSource.CLOSED && !terminado) agregar("⚠️", "Se perdió la conexión con el servidor.");
+  };
+  setTimeout(() => {
+    if (!recibioAlgo && !terminado) {
+      fuente.close();
+      sondear();
+    }
+  }, ESPERA_SSE_MS);
+}
+
+async function sondear() {
+  let frameVisto = 0;
+  while (!terminado) {
+    try {
+      const r = await fetch(`/analisis/${id}/progreso?desde=${ultimoSeq + 1}`).then((x) => x.json());
+      for (const e of r.eventos) despachar(e.tipo, e.datos, e.seq);
+      if (!terminado && r.frame_seq !== frameVisto) {
+        frameVisto = r.frame_seq;
+        if (urlFrame) URL.revokeObjectURL(urlFrame);
+        urlFrame = null;
+        pantalla.src = `/analisis/${id}/frame?n=${frameVisto}`; // image/jpeg directo del servidor
+      }
+      if (r.estado !== "en_curso" && !r.eventos.length) break;
+    } catch {
+      // red inestable (p. ej. datos móviles): se reintenta en el próximo ciclo
+    }
+    await new Promise((listo) => setTimeout(listo, SONDEO_MS));
+  }
+}
+
 function iniciar() {
   if (!/^[0-9a-f]{32}$/.test(id)) {
     agregar("⚠️", "Identificador de análisis inválido.");
     return;
   }
-  const fuente = new EventSource(`/analisis/${id}/eventos`);
-  const json = (f) => (e) => {
-    if (e.lastEventId !== "") {
-      const seq = Number(e.lastEventId);
-      if (seq <= ultimoSeq) return; // ya mostrado antes de una reconexión
-      ultimoSeq = seq;
-    }
-    f(JSON.parse(e.data));
-  };
-  fuente.addEventListener("evento", json(alEvento));
-  fuente.addEventListener("foto", json(agregarFoto));
-  fuente.addEventListener("estatico", json(alEstatico));
-  fuente.addEventListener("frame", json(alFrame));
-  fuente.addEventListener("fin", json((r) => {
-    fuente.close();
-    $("#url-analizada").textContent = r.url;
-    alFin(r);
-  }));
-  fuente.addEventListener("fallo", json((d) => {
-    fuente.close();
-    $("#punto-vivo").classList.add("oculto");
-    agregar("⚠️", `El análisis no terminó: ${d.mensaje}`);
-  }));
-  fuente.onerror = () => {
-    if (fuente.readyState === EventSource.CLOSED) agregar("⚠️", "Se perdió la conexión con el servidor.");
-  };
+  escucharSse();
   fetch(`/analisis/${id}/resultado`).then((r) => (r.ok ? r.json() : null)).then((d) => {
     if (d) $("#url-analizada").textContent = d.url;
     else agregar("⚠️", "Este análisis no existe o ya expiró.");

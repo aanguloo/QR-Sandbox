@@ -23,6 +23,7 @@ worker = ["playwright==1.64.1"]
 experimentos = ["matplotlib>=3.9"]
 dev = [
     "matplotlib>=3.9",
+    "segno>=1.6",
     "pytest>=8",
     "ruff>=0.6",
     "docker>=7.1",

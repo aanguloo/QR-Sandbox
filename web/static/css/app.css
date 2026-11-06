@@ -164,3 +164,4 @@ details > summary { cursor: pointer; font-weight: 600; }
 .indice-ayuda a { display: inline-block; margin: 2px 8px 2px 0; }
 .cabecera { flex-wrap: wrap; }
 .nav { flex-wrap: wrap; }
+.acceso { border: 2px solid var(--primario); }

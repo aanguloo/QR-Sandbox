@@ -21,14 +21,26 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from qrsandbox.comun.esquemas import SolicitudAnalisis
-from qrsandbox.orquestador.ejecutor import ejecutar, limpiar_huerfanos
+from qrsandbox.orquestador.ejecutor import (
+    ConfigWorker,
+    ejecutar,
+    limpiar_huerfanos,
+    resolver_perfil,
+)
 
 FIN = object()
 
 
 @asynccontextmanager
 async def ciclo_de_vida(app: FastAPI):
-    limpiar_huerfanos(docker.from_env())
+    cliente = docker.from_env()
+    limpiar_huerfanos(cliente)
+    # Fallback de gVisor: si runsc no está (p. ej. Docker Desktop en WSL2), se usa runc
+    # endurecido y queda REGISTRADO aquí y en cada resultado (`aviso_runtime`).
+    pedido = ConfigWorker.desde_entorno().perfil
+    perfil, aviso = resolver_perfil(cliente, pedido)
+    print(json.dumps({"evento": "perfil_worker", "pedido": pedido, "efectivo": perfil,
+                      "aviso": aviso}, ensure_ascii=False), flush=True)
     yield
 
 

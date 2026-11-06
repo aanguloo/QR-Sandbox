@@ -126,3 +126,39 @@ export function ubicacionAproximada(timeoutMs = 8000) {
     );
   });
 }
+
+// Demo pública (Fase 8): si el servidor pide código de acceso y aún no lo tenemos, muestra un
+// formulario al comienzo de `contenedor`. El código se manda una vez; el servidor responde con
+// una cookie HttpOnly (este JS nunca la ve). Devuelve una promesa que se cumple con acceso.
+export async function exigirAcceso(contenedor) {
+  let estado;
+  try {
+    estado = await api("/acceso/estado");
+  } catch {
+    return;
+  }
+  if (!estado.requerido || estado.ok) return;
+  await new Promise((resolver) => {
+    const entrada = el("input", { type: "password", autocomplete: "off", required: true, "aria-label": "Código de acceso" });
+    const mensaje = el("div", { "aria-live": "polite" });
+    const formulario = el("form", { class: "tarjeta pila acceso" },
+      el("h2", {}, "Código de acceso"),
+      el("p", {}, "Esta es una demo pública: para analizar enlaces o registrar QRs, ingresa el código que se mostró en la presentación."),
+      el("div", { class: "fila" }, entrada, el("button", { class: "primario", type: "submit" }, "Entrar")),
+      mensaje);
+    formulario.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/acceso", { metodo: "POST", cuerpo: { codigo: entrada.value } });
+        formulario.remove();
+        resolver();
+      } catch (err) {
+        mostrarMensaje(mensaje, err.message, "error");
+      }
+    });
+    contenedor.prepend(formulario);
+    entrada.focus();
+  });
+}
+
+export const esErrorDeAcceso = (e) => /código de acceso/.test(e?.message || "");

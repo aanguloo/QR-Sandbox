@@ -74,6 +74,8 @@ def eventos_sse(id_analisis: str) -> list[tuple[str, dict]]:
         texto = "".join(r.iter_text())
     salida = []
     for bloque in texto.strip().split("\n\n"):
+        if bloque.lstrip().startswith(":"):
+            continue  # comentarios SSE (relleno y latidos)
         campos = dict(linea.split(": ", 1) for linea in bloque.splitlines() if ": " in linea)
         salida.append((campos["event"], json.loads(campos["data"])))
     return salida
@@ -226,3 +228,17 @@ def test_analisis_incluye_veredicto_y_estado_del_log(orquestador_falso, entorno)
     sin_ubicacion = cliente.post("/analisis?esperar=true", json={"url": "https://example.com"}).json()
     assert sin_ubicacion["log"] is None
     assert sin_ubicacion["veredicto"]["estado"] == "sin_alertas"
+
+
+def test_progreso_por_sondeo_y_frame_actual(orquestador_falso):
+    """Respaldo del SSE: mismo contenido por sondeo; el frame va aparte como image/jpeg."""
+    r = cliente.post("/analisis?esperar=true", json={"url": "https://example.com"}).json()
+    p = cliente.get(f"/analisis/{r['id']}/progreso").json()
+    assert p["estado"] == "terminado" and p["frame_seq"] >= 1
+    assert [e["seq"] for e in p["eventos"]] == list(range(len(p["eventos"])))
+    assert p["eventos"][-1]["tipo"] == "fin"
+    resto = cliente.get(f"/analisis/{r['id']}/progreso", params={"desde": len(p["eventos"]) - 1}).json()
+    assert [e["tipo"] for e in resto["eventos"]] == ["fin"]
+    f = cliente.get(f"/analisis/{r['id']}/frame")
+    assert f.headers["content-type"] == "image/jpeg" and f.content.startswith(b"\xff\xd8\xff")
+    assert cliente.get(f"/analisis/{r['id']}/progreso", params={"desde": -1}).status_code == 422

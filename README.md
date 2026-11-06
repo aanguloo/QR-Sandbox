@@ -6,7 +6,7 @@ dispositivo del usuario: se analiza en un sandbox desechable y se contrasta con
 un **QR Transparency Log** (inspirado en Certificate Transparency) para detectar
 stickers superpuestos sobre QRs legítimos.
 
-> Estado: Fases 0–5 terminadas y Fase 6 (experimentos) casi lista: sandbox endurecido con gVisor
+> Estado: Fases 0–5 y 8 terminadas; Fase 6 (experimentos) casi lista y Fase 7 (informe) pendiente: sandbox endurecido con gVisor
 > y anti-SSRF, QR Transparency Log con revocación, señales y veredicto explicado, aplicación web
 > con análisis en vivo, fotos paso a paso y ayuda. Ver [CLAUDE.md](CLAUDE.md) para el diseño, las reglas de
 > seguridad y el plan de fases. La especificación completa está en
@@ -100,6 +100,22 @@ Remove-NetFirewallRule -DisplayName QR-Sandbox-LAN
   válido. En la demo pública (Fase 8) el túnel de Cloudflare da un HTTPS real.
 - Lo que registres en el panel de comercio queda en el log (append-only). El log todavía
   tiene registros de prueba en la Plaza de Armas: si escaneas ahí, saldrá "no coincide".
+
+## Demo pública (Cloudflare Tunnel)
+
+```bash
+make demo        # levanta todo + túnel; muestra la URL, el código de acceso y genera el QR
+make demo-stop   # cierra el túnel y apaga todo
+```
+- Publica la app en una URL `https://<algo>.trycloudflare.com`, que **cambia cada vez**.
+  `make demo` deja el QR de esa URL en `data/demo/qr-demo.png`, listo para la diapositiva.
+- **Código de acceso:** sin él no se pueden lanzar análisis ni registrar QRs, así nadie puede
+  usar el servicio como proxy abierto. Está en `.env` (`DEMO_ACCESS_CODE`; `make demo` lo crea
+  si falta). Se ingresa una vez y queda en una cookie segura.
+- **Límites:** 5 análisis por minuto por persona, 20 por minuto en total y como máximo 3
+  navegadores aislados a la vez.
+- Guion de la presentación, plan B y cómo grabar el video de respaldo:
+  [docs/guion-demo.md](docs/guion-demo.md).
 
 ## Uso rápido
 

@@ -1,6 +1,6 @@
 // Escanear: decodifica el QR EN EL NAVEGADOR y muestra el destino antes de hacer nada.
 // Nunca se navega al destino desde aquí: solo se manda el texto al sandbox.
-import { $, api, mostrarMensaje, registrarServiceWorker, ubicacionAproximada } from "./comun.js";
+import { $, api, esErrorDeAcceso, exigirAcceso, mostrarMensaje, registrarServiceWorker, ubicacionAproximada } from "./comun.js";
 
 const video = $("#video");
 const lienzo = $("#lienzo");
@@ -123,6 +123,12 @@ async function analizar() {
     const r = await api("/analisis", { metodo: "POST", cuerpo });
     location.assign(r.pagina); // nuestra página de resultado, nunca el destino del QR
   } catch (e) {
+    if (esErrorDeAcceso(e)) {
+      $("#mensaje-analisis").replaceChildren();
+      await exigirAcceso($("main"));
+      boton.disabled = false;
+      return analizar();
+    }
     mostrarMensaje($("#mensaje-analisis"), `No se pudo iniciar el análisis: ${e.message}`, "error");
     boton.disabled = false;
   }
@@ -141,4 +147,5 @@ $("#form-manual").addEventListener("submit", (e) => {
   const texto = $("#manual").value.trim();
   if (texto) mostrarDestino(texto);
 });
+exigirAcceso($("main"));
 registrarServiceWorker();

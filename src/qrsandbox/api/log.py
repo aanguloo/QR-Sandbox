@@ -16,6 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
+from qrsandbox.api.acceso import exigir_acceso
 from qrsandbox.comun.esquemas import Url, normalizar_url
 from qrsandbox.tlog.log import LogTransparencia, RegistroRechazado, cargar_o_crear_clave
 from qrsandbox.tlog.registro import ClavePublica, SolicitudRegistro, SolicitudRevocacion
@@ -70,7 +71,7 @@ def sth_historico(tamano: int, log: Log) -> dict:
     return sth.a_dict()
 
 
-@router.post("/registros", status_code=201)
+@router.post("/registros", status_code=201, dependencies=[Depends(exigir_acceso)])
 def registrar(solicitud: SolicitudRegistro, log: Log) -> dict:
     try:
         return log.agregar(solicitud)
@@ -78,7 +79,7 @@ def registrar(solicitud: SolicitudRegistro, log: Log) -> dict:
         raise HTTPException(400, str(e)) from None
 
 
-@router.post("/revocaciones", status_code=201)
+@router.post("/revocaciones", status_code=201, dependencies=[Depends(exigir_acceso)])
 def revocar(solicitud: SolicitudRevocacion, log: Log) -> dict:
     """El comercio retira un QR. Debe firmarlo la misma clave que lo registró."""
     try:
