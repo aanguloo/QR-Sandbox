@@ -7,7 +7,7 @@ PORT  ?= 8000
 STAMP := $(VENV)/.instalado
 
 .DEFAULT_GOAL := help
-.PHONY: help venv dev test test-int lint build-worker up down logs ps analizar clean
+.PHONY: help venv dev test test-int lint seccomp build-worker up down logs ps analizar clean
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
@@ -27,11 +27,14 @@ dev: $(STAMP) ## Corre la API localmente sin Docker (solo loopback)
 test: $(STAMP) ## Corre los tests con pytest
 	$(PY) -m pytest -q
 
-test-int: $(STAMP) build-worker ## Tests de integración (Docker + internet)
+test-int: $(STAMP) up ## Tests de integración (levanta el stack; Docker + internet)
 	$(PY) -m pytest -q -m integracion
 
 lint: $(STAMP) ## Revisa el estilo con ruff
 	$(VENV)/bin/ruff check src tests
+
+seccomp: ## Regenera el perfil seccomp del worker desde el de Docker
+	python3 scripts/generar_seccomp.py
 
 build-worker: ## Construye la imagen del worker (no es un servicio de compose)
 	docker build -q -t qrsandbox-worker:dev -f docker/worker/Dockerfile .
@@ -49,7 +52,7 @@ logs: ## Muestra los logs de los servicios
 ps: ## Estado de los servicios
 	docker compose ps
 
-analizar: $(STAMP) build-worker ## Analiza una URL desde la terminal: make analizar URL=https://example.com
+analizar: $(STAMP) up ## Analiza una URL desde la terminal: make analizar URL=https://example.com
 	$(PY) -m qrsandbox.orquestador "$(URL)" --captura data/capturas/ultima.jpg
 
 clean: ## Borra .venv y cachés

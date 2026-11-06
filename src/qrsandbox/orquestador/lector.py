@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from qrsandbox.comun.esquemas import ADAPTADOR_EVENTO, Evento
 
 MAX_LINEA = 300_000  # bytes por línea (la captura en base64 es la más grande)
-MAX_TOTAL = 4_000_000  # bytes totales por análisis
+MAX_TOTAL = 8_000_000  # bytes totales por análisis (~2,5 fps de frames durante 20 s)
 MAX_EVENTOS = 1_000  # eventos válidos por análisis
 
 

@@ -1,5 +1,11 @@
-# Fase 1: API + orquestador. Los workers NO son servicios de compose: el
-# orquestador crea uno por análisis y lo destruye al terminar.
+# API + orquestador + proxy de salida. Los workers NO son servicios de compose: el
+# orquestador crea uno por análisis (en la red `sandbox`) y lo destruye al terminar.
+#
+# Redes:
+#   publica  -> la API publica su puerto (solo loopback por defecto)
+#   interna  -> API <-> orquestador (internal: sin salida a internet)
+#   sandbox  -> workers <-> proxy (internal: la ÚNICA salida es el proxy)
+#   egreso   -> proxy -> internet
 services:
   api:
     build:
@@ -43,8 +49,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       WORKER_IMAGEN: ${WORKER_IMAGEN:-qrsandbox-worker:dev}
-      WORKER_RUNTIME: ${WORKER_RUNTIME:-runc}
-      WORKER_RED: ${WORKER_RED:-bridge}
+      # basico | endurecido | gvisor (si runsc no está, cae a endurecido y lo registra)
+      WORKER_PERFIL: ${WORKER_PERFIL:-gvisor}
+      WORKER_RED: qrsandbox_sandbox
+      WORKER_PROXY: http://172.31.250.2:3128
       MAX_WORKERS: ${MAX_WORKERS:-3}
     # Solo en la red interna y sin puertos publicados: solo la API lo alcanza.
     networks: [interna]
@@ -53,6 +61,17 @@ services:
       - /tmp
     cap_drop:
       - ALL
+    # SETUID/SETGID solo para que el re-codificador de frames baje a nobody sin grupos
+    # (y así no pueda tocar el socket de Docker), y KILL para poder matarlo si se cuelga.
+    # Ver orquestador/recodificador.py. El orquestador ya es "root" vía el socket, así
+    # que estas capabilities no le agregan poder real; al hijo no se le heredan.
+    cap_add:
+      - SETUID
+      - SETGID
+      - KILL
+    depends_on:
+      proxy:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -63,9 +82,45 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    image: qrsandbox-proxy:dev
+    networks:
+      sandbox:
+        ipv4_address: 172.31.250.2  # IP fija: los workers no dependen del DNS de Docker
+      egreso: {}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 3128), 2).close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    restart: unless-stopped
+
 networks:
   publica: {}
   # internal: sin salida a internet. El orquestador no necesita red externa
   # (habla con el daemon por el socket).
   interna:
     internal: true
+  sandbox:
+    name: qrsandbox_sandbox  # nombre fijo: el orquestador conecta ahí a los workers
+    internal: true
+    driver_opts:
+      # Sin IP del host en este bridge: los workers NO pueden abrir conexiones a
+      # servicios del host (gateway 172.31.250.1) saltándose el proxy. Sin esto, un
+      # worker comprometido llegaba a cualquier puerto del host en 0.0.0.0.
+      com.docker.network.bridge.inhibit_ipv4: "true"
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+  egreso: {}

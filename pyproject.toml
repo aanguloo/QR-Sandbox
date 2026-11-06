@@ -16,16 +16,20 @@ dependencies = [
 
 [project.optional-dependencies]
 # Cada imagen instala solo lo que necesita (menor superficie de ataque).
-orquestador = ["docker>=7.1"]
+orquestador = ["docker>=7.1", "pillow>=11"]
 worker = ["playwright==1.64.1"]
 dev = [
     "pytest>=8",
     "ruff>=0.6",
     "docker>=7.1",
+    "pillow>=11",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"qrsandbox.orquestador" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

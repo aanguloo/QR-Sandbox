@@ -175,9 +175,10 @@ CLAUDE.md, README.md, PROMPT_QR-Sandbox.md (especificación)
 Makefile, docker-compose.yml, pyproject.toml, .env.example
 src/qrsandbox/
   api/          API FastAPI (sin acceso a Docker)
-  orquestador/  único que controla Docker; valida output tainted del worker
+  orquestador/  único que controla Docker: ejecutor (perfiles), lector + filtro (tainted,
+                anti-DoS), recodificador (frames en proceso aislado), seccomp_worker.json
   worker/       Playwright; solo carga páginas; eventos JSON por stdout
-  proxy/        proxy de salida anti-SSRF
+  proxy/        proxy de salida anti-SSRF (politica.py = reglas de IP, servidor.py)
   tlog/         QR Transparency Log (Merkle, Ed25519, pruebas)
   senales/      señales estáticas
   veredicto/    motor de veredicto + explicación
@@ -195,6 +196,7 @@ scripts/        utilidades (auditor del log, demo, etc.)
 `make help` lista todo. Principales: `make test` (unitarios), `make test-int` (integración:
 Docker + internet), `make lint`, `make dev` (API local sin Docker), `make build-worker`,
 `make analizar URL=...` (CLI del orquestador, guarda `data/capturas/ultima.jpg`),
+`make seccomp` (regenera el perfil seccomp del worker),
 `make up` / `make down` / `make logs` / `make ps` (docker compose).
 
 ## 9. Plan de fases y estado
@@ -205,7 +207,7 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 |---|---|---|---|---|
 | 0 | Base: CLAUDE.md, estructura, compose, Makefile, README, `/health` | `make up` levanta la API y `/health` responde | vie 6-nov | ✅ 6-nov |
 | 1 | Worker Playwright + orquestador (1 contenedor por análisis) | `https://example.com` → JSON válido; el contenedor desaparece | sáb 7-nov | ✅ 6-nov (adelantada) |
-| 2 | Endurecimiento + proxy anti-SSRF + validación tainted + eventos | 127.0.0.1, 169.254.169.254, 10.0.0.1 y redirección a IP privada bloqueados; JSON malformado/gigante rechazado | dom 8 – lun 9-nov | pendiente |
+| 2 | Endurecimiento + proxy anti-SSRF + validación tainted + eventos | 127.0.0.1, 169.254.169.254, 10.0.0.1 y redirección a IP privada bloqueados; JSON malformado/gigante rechazado | dom 8 – lun 9-nov | ✅ 6-nov (adelantada) |
 | 3 | QR Transparency Log (Merkle RFC 6962, Ed25519, endpoints, auditor) | tests de inclusión/consistencia; firma inválida rechazada; hoja alterada en BD hace fallar la verificación | mar 10 – mié 11-nov | pendiente |
 | 4 | Señales estáticas + motor de veredicto + explicación | test unitario por señal; veredicto con puntaje, estado y razones | jue 12-nov | pendiente |
 | 5 | Web app: Escanear, Resultado (en vivo), Comercio, Explorador del log | 4 secciones en el celular por red local; test de `<title>` con `<script>` mostrado como texto | vie 13 – sáb 14-nov | pendiente |
@@ -255,6 +257,44 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 - **(F1)** Ya en Fase 1 el worker corre con UID 10001, `cap_drop ALL`, `no-new-privileges`,
   `read_only` + tmpfs `/tmp`, 512 MB sin swap, 1 CPU, `pids_limit 256` y timeout de 20 s.
   Falta para Fase 2: seccomp propio, red sin salida salvo proxy, runtime `runsc`.
+- **(F2)** Perfiles `WORKER_PERFIL`: `basico` (Docker por defecto, solo para el Exp. 2),
+  `endurecido` (runc + flags + seccomp propio) y `gvisor` (endurecido + `runsc`, **por
+  defecto**). Si `runsc` no aparece en `docker info` o falla al crear el contenedor, se usa
+  `endurecido` y queda en `aviso_runtime`. `WORKER_RUNTIME` se reemplazó por `WORKER_PERFIL`.
+- **(F2)** Red: todos los perfiles usan la red `qrsandbox_sandbox` (`internal: true`,
+  172.31.250.0/24) donde solo están el proxy (IP fija 172.31.250.2, sin depender del DNS de
+  Docker, que no es fiable con gVisor) y los workers. El proxy además está en `egreso`.
+  **Hallazgo:** aun siendo `internal`, un contenedor de esa red llegaba a servicios del host en
+  `0.0.0.0` vía el gateway 172.31.250.1 (con runc y con runsc). Se cerró con
+  `com.docker.network.bridge.inhibit_ipv4=true` (el host no tiene IP en ese bridge).
+  Riesgo residual: workers concurrentes comparten la red (no escuchan puertos).
+- **(F2)** Proxy anti-SSRF propio (asyncio, solo stdlib): resuelve una vez, bloquea si
+  *alguna* IP resuelta no es global (incluye IPv6 con IPv4 embebida: mapped, 6to4, Teredo,
+  NAT64), solo puertos 80/443, y conecta a la IP validada (anti DNS rebinding). En HTTP
+  plano fuerza `Connection: close` para atar la conexión a un destino. Log JSON por decisión.
+  Chromium usa `bypass "<-loopback>"` para que ni 127.0.0.1 se salte el proxy, y WebRTC sin
+  UDP directo. El worker **falla cerrado** sin `QRS_PROXY`.
+- **(F2)** Seccomp = perfil por defecto de Docker (copia en `docker/worker/seccomp/`) menos 20
+  syscalls (ptrace, process_vm_*, userfaultfd, bpf, perf_event_open, io_uring_*, keyctl,
+  name_to_handle_at, …); generado por `scripts/generar_seccomp.py`. **Verificado:** con
+  `runsc` el perfil seccomp OCI se ignora (`ptrace` devuelve 0 dentro de gVisor), porque las
+  syscalls las atiende el Sentry (kernel de gVisor en espacio de usuario) y no el kernel del
+  host; gVisor aplica su propio filtro seccomp al Sentry. Son capas alternativas, no sumadas.
+- **(F2)** Frames: el worker emite screencast CDP (~2,5 fps, máx. 200 KB) + captura final. El
+  orquestador valida base64/magic/tamaño y re-codifica cada frame en un **proceso hijo
+  persistente** (no uno por frame) que baja a `nobody` sin grupos, con rlimit de 256 MB de
+  memoria virtual, CPU, sin archivos ni procesos, timeout por frame y relanzamiento si muere.
+  Para eso el orquestador tiene `cap_add: SETUID, SETGID, KILL` (ya es root vía el socket).
+  Desde el host (CLI, sin root) el hijo no puede bajar de privilegios: `recodificador_aislado`
+  lo indica en las métricas.
+- **(F2)** Filtro anti-DoS con el reloj del orquestador: 50 eventos/s (ráfaga 100), tope por
+  tipo con agrupación del excedente (`agrupados`), ≤ 4 frames/s; `fin` nunca se descarta.
+- **(F2)** URLs normalizadas (esquema/host en minúsculas, IDN → punycode, sin puerto por
+  defecto ni fragmento; se conserva el userinfo como señal). Se rechazan espacios/control.
+- **(F2)** `ejecutar(..., al_evento=...)` publica cada evento aceptado al instante: es el
+  gancho para el SSE de la Fase 5.
+- **(F2)** Para los tests de redirección externa se usa `httpbin.dev` (httpbin.org y
+  httpbingo.org responden 403 a `redirect-to` hacia IPs privadas).
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en
@@ -286,3 +326,17 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
   --runtime=runsc alpine dmesg` muestra "Starting gVisor...". `make test-int` pasa con
   `WORKER_RUNTIME=runc` y `=runsc`; compose con `runsc` OK de punta a punta. Primer dato de
   overhead (1 análisis de example.com, no es una medición): runc ~3,1 s vs runsc ~4,3–4,6 s.
+- **6-nov — Fase 2:** proxy anti-SSRF (`proxy/politica.py`, `proxy/servidor.py`) en su
+  contenedor, red `sandbox` aislada, perfiles basico/endurecido/gvisor con fallback, seccomp
+  propio, screencast CDP + re-codificación aislada con Pillow, filtro anti-DoS, URLs
+  normalizadas. Verificación: `make test` **88 passed** (política de IPs, proxy en proceso
+  con DNS simulado: 127.0.0.1, 169.254.169.254, 10.0.0.1, localhost, rebinding, registro
+  mixto, IPv6 embebida, CONNECT, redirección→privada, cabeceras gigantes; re-codificador con
+  EXIF, PNG disfrazado, bomba de píxeles, hijo que muere; ejecutor con Docker falso: salida
+  gigante → se mata y borra, JSON roto descartado, fallback de runsc). `make test-int`
+  **22 passed** (los 6 casos SSRF con `endurecido` y `gvisor`, registrados como bloqueados
+  en el log del proxy; sin salida directa ni acceso al host desde `sandbox`; ptrace permitido
+  con el seccomp de Docker y bloqueado con el nuestro, e ignorado con runsc; los 3 perfiles analizan example.com;
+  worker sin proxy no navega; re-codificador como UID 65534 sin grupos y sin acceso al socket).
+  Muestra (2 corridas, example.com, no es medición): basico ~3,0 s, endurecido ~3,2 s,
+  gvisor ~4,4 s; arranque del contenedor ~200 ms; re-codificación ~20–27 ms/frame.

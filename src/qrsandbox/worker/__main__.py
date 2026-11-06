@@ -16,6 +16,8 @@ import asyncio
 import base64
 import ipaddress
 import json
+import os
+import re
 import sys
 import time
 from urllib.parse import urlsplit
@@ -29,6 +31,7 @@ TIMEOUT_NAVEGACION_MS = 12_000
 ESPERA_POST_CARGA_MS = 1_500  # deja correr redirecciones por JS / meta refresh tardías
 MAX_TERCEROS_EMITIDOS = 50
 MAX_CAPTURA_BYTES = 200_000
+SCREENCAST_INTERVALO_S = 0.4  # ~2,5 fps
 VIEWPORT = {"width": 390, "height": 844}  # resolución de celular
 USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
@@ -68,6 +71,35 @@ def dominio_base(host: str) -> str:
     return ".".join(etiquetas[-2:]) if len(etiquetas) >= 2 else host
 
 
+PROXY = os.environ.get("QRS_PROXY", "")
+
+
+async def iniciar_screencast(contexto, pagina) -> None:
+    """Vista previa en vivo vía CDP (Page.startScreencast), limitada a ~2,5 fps.
+
+    Solo salen imágenes JPEG (nunca HTML/JS): el orquestador además las re-codifica.
+    """
+    cdp = await contexto.new_cdp_session(pagina)
+    ultimo = [0.0]
+
+    async def al_frame(params) -> None:
+        try:
+            await cdp.send("Page.screencastFrameAck", {"sessionId": params["sessionId"]})
+        except ErrorPlaywright:
+            return
+        ahora = time.monotonic()
+        datos = params.get("data", "")
+        if ahora - ultimo[0] >= SCREENCAST_INTERVALO_S and len(datos) * 3 // 4 <= MAX_CAPTURA_BYTES:
+            ultimo[0] = ahora
+            emitir("captura", jpeg_b64=datos)
+
+    cdp.on("Page.screencastFrame", lambda params: asyncio.ensure_future(al_frame(params)))
+    await cdp.send(
+        "Page.startScreencast",
+        {"format": "jpeg", "quality": 50, "maxWidth": VIEWPORT["width"], "maxHeight": VIEWPORT["height"]},
+    )
+
+
 async def analizar(url: str) -> None:
     redirecciones: list[str] = []
     navegaciones: list[str] = []
@@ -78,7 +110,21 @@ async def analizar(url: str) -> None:
         # Chromium corre con --no-sandbox (default de Playwright): su sandbox interno
         # necesita user namespaces/SUID, que el contenedor endurecido no ofrece.
         # El aislamiento lo dan el contenedor y el runtime (runc endurecido / gVisor).
-        navegador = await p.chromium.launch(args=["--disable-dev-shm-usage", "--disable-gpu"])
+        navegador = await p.chromium.launch(
+            # Toda conexión sale por el proxy anti-SSRF. "<-loopback>" QUITA la excepción
+            # implícita de Chromium para localhost/127.0.0.1: también esas van al proxy
+            # (y el proxy las bloquea). Igual la red del contenedor no tiene otra salida.
+            proxy={"server": PROXY, "bypass": "<-loopback>"},
+            args=[
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                # WebRTC podría mandar UDP directo, sin pasar por el proxy.
+                "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+                "--disable-background-networking",  # nada de tráfico propio de Chromium
+                "--dns-prefetch-disable",
+                "--no-pings",  # sin <a ping> (rastreo)
+            ],
+        )
         contexto = await navegador.new_context(
             viewport=VIEWPORT,
             user_agent=USER_AGENT,
@@ -89,6 +135,7 @@ async def analizar(url: str) -> None:
             service_workers="block",  # que la página no deje código persistente
         )
         pagina = await contexto.new_page()
+        await iniciar_screencast(contexto, pagina)
 
         def al_request(req) -> None:
             try:
@@ -109,6 +156,16 @@ async def analizar(url: str) -> None:
             except ErrorPlaywright:
                 pass
 
+        def al_responder(resp) -> None:
+            # El proxy marca sus bloqueos con una cabecera; lo informamos en la línea de tiempo.
+            try:
+                motivo = resp.headers.get("x-qrsandbox-bloqueo")
+                if motivo and resp.request.is_navigation_request():
+                    motivo = re.sub(r"[^a-z0-9_]", "", motivo.lower())[:40]
+                    emitir("error", mensaje=f"egreso bloqueado por el proxy ({motivo}): {resp.url[:300]}")
+            except ErrorPlaywright:
+                pass
+
         def al_navegar(frame) -> None:
             es_nueva = not navegaciones or navegaciones[-1] != frame.url
             if frame == pagina.main_frame and es_http(frame.url) and es_nueva:
@@ -121,6 +178,7 @@ async def analizar(url: str) -> None:
             asyncio.ensure_future(descarga.cancel())
 
         pagina.on("request", al_request)
+        pagina.on("response", al_responder)
         pagina.on("framenavigated", al_navegar)
         pagina.on("download", al_descargar)
         pagina.on("dialog", lambda d: asyncio.ensure_future(d.dismiss()))
@@ -186,6 +244,11 @@ async def analizar(url: str) -> None:
 
 
 def main() -> int:
+    if not PROXY:
+        # Falla cerrado: sin proxy no se navega (nunca salir "directo" por error de config).
+        emitir("error", mensaje="falta QRS_PROXY: el worker no navega sin el proxy de salida")
+        emitir("fin", resultado=None)
+        return 3
     if len(sys.argv) != 2 or not es_http(sys.argv[1]):
         emitir("error", mensaje="uso: python -m qrsandbox.worker <url http/https>")
         emitir("fin", resultado=None)

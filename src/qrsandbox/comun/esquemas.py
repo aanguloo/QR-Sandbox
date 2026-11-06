@@ -10,7 +10,7 @@ cada evento se valida contra un esquema CERRADO:
 """
 
 from typing import Annotated, Literal
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter
 
@@ -19,16 +19,49 @@ MAX_DOMINIO = 253  # largo máximo de un nombre DNS
 MAX_CAPTURA_B64 = 280_000  # ~200 KB de JPEG en base64
 
 
-def _validar_url(valor: str) -> str:
+_PUERTO_POR_DEFECTO = {"http": 80, "https": 443}
+
+
+def normalizar_url(valor: str) -> str:
+    """Valida y normaliza una URL http/https.
+
+    - Caracteres de control o espacios => rechazo (inyección en cabeceras/logs).
+    - Esquema y host en minúsculas; host IDN convertido a punycode (`xn--...`): así un
+      dominio con homoglifos (p. ej. "bancoestаdo.cl" con una "а" cirílica) nunca se
+      muestra al usuario como si fuera el legítimo.
+    - Se quitan el puerto por defecto y el fragmento (#...), que no llegan al servidor.
+    - Se conserva el userinfo (`usuario@`): es una señal de engaño para la Fase 4.
+    """
+    if any(ord(c) <= 0x20 or ord(c) == 0x7F for c in valor):
+        raise ValueError("URL con caracteres de control o espacios")
     partes = urlsplit(valor)
-    if partes.scheme not in ("http", "https"):
+    esquema = partes.scheme.lower()
+    if esquema not in _PUERTO_POR_DEFECTO:
         raise ValueError("solo se permiten URLs http/https")
-    if not partes.hostname:
+    host = partes.hostname
+    if not host:
         raise ValueError("URL sin host")
-    # Caracteres de control en una URL son señal de inyección (cabeceras, logs).
-    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in valor):
-        raise ValueError("URL con caracteres de control")
-    return valor
+    try:
+        puerto = partes.port
+    except ValueError:
+        raise ValueError("puerto inválido") from None
+    if not host.isascii():
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError:
+            raise ValueError("dominio internacional inválido") from None
+    if ":" in host:  # IPv6 literal
+        host = f"[{host}]"
+    netloc = host
+    if puerto is not None and puerto != _PUERTO_POR_DEFECTO[esquema]:
+        netloc += f":{puerto}"
+    if "@" in partes.netloc:
+        netloc = partes.netloc.rsplit("@", 1)[0] + "@" + netloc
+    return urlunsplit((esquema, netloc, partes.path, partes.query, ""))
+
+
+def _validar_url(valor: str) -> str:
+    return normalizar_url(valor)
 
 
 Url = Annotated[str, StringConstraints(max_length=MAX_URL), AfterValidator(_validar_url)]
@@ -142,12 +175,19 @@ class ResultadoAnalisis(BaseModel):
     id: str
     url: str
     runtime: str
+    perfil: str = "endurecido"  # perfil de aislamiento efectivamente usado
+    perfil_pedido: str | None = None
+    aviso_runtime: str | None = None  # p. ej. fallback de gVisor a runc endurecido
     duracion_ms: int
     codigo_salida: int | None
     timeout: bool
     salida_excedida: bool
     eventos: list[dict]  # eventos ya validados (sin la captura, que va aparte)
-    eventos_descartados: int
+    eventos_descartados: int  # inválidos según el esquema (o frames que no re-codifican)
+    descartados_tasa: int = 0  # descartados por el límite de eventos/s
+    agrupados: dict[str, int] = {}  # excedentes por tipo ("+230 request_tercero")
+    frames: int = 0  # frames del screencast aceptados y re-codificados
+    metricas: dict[str, float | int | bool | None] = {}
     resultado: ResultadoWorker | None
     captura_jpeg_b64: str | None
     contenedor_eliminado: bool
