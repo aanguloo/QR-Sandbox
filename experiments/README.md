@@ -18,7 +18,8 @@ pruebas de contención usan solo páginas propias servidas localmente.
 
 1. `preparar.py` arma `dataset.csv`. Las URLs **maliciosas** son de OpenPhish y aparecen por
    primera vez en el snapshot de la fecha elegida. Las **benignas** son 50 sitios chilenos
-   comunes más dominios de Tranco en los puestos 10.001–110.000.
+   comunes, 158 sitios legítimos en hosting gratuito (`benignas_hosting_prueba.txt`) y el
+   resto, dominios de Tranco en los puestos 10.001–110.000.
 2. `ejecutar.py` mide cuatro métodos sobre cada URL:
    - (A) solo listas negras, con snapshots **anteriores** a esa fecha (separación temporal);
    - (A\*) la lista del mismo día, como cota optimista;
@@ -41,8 +42,13 @@ final necesita snapshots de **varios días**: hay que correr `make listas` a dia
 `make exp1` (por ejemplo, el 14-nov). Con un solo día, (A) no tiene lista previa y su recall
 es 0 por construcción.
 Hallazgo del piloto: los falsos negativos fueron sitios en `*.pages.dev` (hosting gratuito)
-con nombres aleatorios. Cualquier señal nueva debe ajustarse con datos de días anteriores al
-de prueba, no con el conjunto de prueba.
+con nombres aleatorios. **Señal agregada con datos de desarrollo** (6-nov): `hosting_gratuito`
+(+10) y `nombre_generado` (+25). En el desarrollo, 155 de 300 phishing de OpenPhish estaban en
+hosting gratuito, y las reglas de nombre generado detectan el 69 % de ellos y 0 de 158 sitios
+legítimos reales: páginas oficiales de repos populares de GitHub, partidas al azar en
+`benignas_hosting_desarrollo.txt` (para diseñar) y `benignas_hosting_prueba.txt` (reservada,
+entra al Exp. 1). `analizar.py` reporta los falsos positivos por fuente
+(`exp1_fp_por_fuente.csv`).
 
 ## 2. Contención (`exp2_contencion/`)
 

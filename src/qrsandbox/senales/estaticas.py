@@ -19,7 +19,9 @@ from qrsandbox.senales.dominio import (
     es_rastreador,
     esqueleto_homoglifos,
     levenshtein,
+    motivos_nombre_generado,
     partes_host,
+    plataforma_gratuita,
 )
 from qrsandbox.senales.hallazgos import Hallazgo
 from qrsandbox.senales.listas import ListasNegras
@@ -107,6 +109,22 @@ def senal_acortador(p: PartesHost) -> list[Hallazgo]:
         return [Hallazgo("acortador", f"Es un enlace acortado ({p.host}): esconde el destino "
                          "real hasta que se abre.", "es un enlace acortado que esconde el destino")]
     return []
+
+
+def senal_hosting_gratuito(p: PartesHost) -> list[Hallazgo]:
+    """Página en un hosting gratuito y, sobre todo, con un nombre generado al azar."""
+    encontrado = plataforma_gratuita(p)
+    if not encontrado:
+        return []
+    plataforma, nombre = encontrado
+    h = [Hallazgo("hosting_gratuito", f"El sitio está en {plataforma}, un servicio donde cualquiera "
+                  "publica una página gratis en minutos: el candado y la antigüedad del dominio son "
+                  "de la plataforma, no de este sitio.", f"está en un hosting gratuito ({plataforma})")]
+    if motivos := motivos_nombre_generado(nombre):
+        h.append(Hallazgo("nombre_generado", f"El nombre «{nombre}» parece generado automáticamente "
+                          f"({', '.join(motivos)}), algo típico de páginas desechables.",
+                          "usa un nombre generado al azar"))
+    return h
 
 
 def senal_subdominios(p: PartesHost) -> list[Hallazgo]:
@@ -285,7 +303,7 @@ def analizar_url(
     h += marca
     if not any(x.codigo == "homoglifos_marca" for x in marca):
         h += senal_punycode(p)
-    h += senal_rastreador(p) + senal_tld(p) + senal_acortador(p) + senal_subdominios(p) + senal_palabras_clave(url)
+    h += senal_rastreador(p) + senal_hosting_gratuito(p) + senal_tld(p) + senal_acortador(p) + senal_subdominios(p) + senal_palabras_clave(url)
     r.datos = {"host": p.host, "host_unicode": p.host_unicode, "dominio": p.registrable,
                "lista_negra_cargada": listas is not None and not listas.vacia,
                "rango_tranco": listas.popularidad(p.registrable) if listas and p.registrable else None}

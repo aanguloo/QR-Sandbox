@@ -6,9 +6,12 @@
   (no estaban en ningún snapshot anterior). Así la lista negra de los días previos, que usa
   el método (A), no las contiene por construcción: se mide de verdad si las listas
   "llegan tarde".
-- Benignas: sitios chilenos comunes (chilenos.txt) + una muestra al azar de los dominios
-  10.001–110.000 de Tranco (no los más famosos, que serían demasiado fáciles; y fuera del
-  top 10.000 para no favorecer al filtro de popularidad, que usa el top 100.000: se reporta).
+- Benignas: sitios chilenos comunes (chilenos.txt) + sitios legítimos en hosting gratuito
+  (benignas_hosting_prueba.txt: páginas oficiales de repos populares de GitHub en github.io,
+  vercel.app, netlify.app, pages.dev; es la mitad de PRUEBA, que no se miró al diseñar la señal
+  de hosting gratuito) + el resto, una muestra de los dominios 10.001–110.000 de Tranco (no los
+  más famosos, que serían demasiado fáciles; nota: el filtro de popularidad usa el top 100.000).
+  Sin los sitios en hosting gratuito, la tasa de falsos positivos de esa señal no se mediría.
 
 Salida: experiments/exp1_deteccion/dataset.csv (url, etiqueta, fuente, fecha).
 """
@@ -64,9 +67,12 @@ def main():
         rango, _, dominio = linea.partition(",")
         if rango.isdigit() and 10_000 < int(rango) <= 110_000:
             candidatos.append(dominio.strip())
-    n_tranco = max(0, len(maliciosas) - len(chilenos))
-    benignas = chilenos + [f"https://{d}/" for d in rng.sample(candidatos, n_tranco)]
-    print(f"benignas: {len(chilenos)} chilenas + {n_tranco} de Tranco (rangos 10.001–110.000)")
+    hosting = [ln.strip() for ln in (AQUI / "benignas_hosting_prueba.txt").read_text().splitlines()
+               if ln.startswith("https://")]
+    n_tranco = max(0, len(maliciosas) - len(chilenos) - len(hosting))
+    benignas = chilenos + hosting + [f"https://{d}/" for d in rng.sample(candidatos, n_tranco)]
+    print(f"benignas: {len(chilenos)} chilenas + {len(hosting)} en hosting gratuito + "
+          f"{n_tranco} de Tranco (rangos 10.001–110.000)")
 
     with (AQUI / "dataset.csv").open("w", newline="") as f:
         w = csv.writer(f)
@@ -74,7 +80,8 @@ def main():
         for u in maliciosas:
             w.writerow([u, "maliciosa", "openphish", fecha])
         for u in benignas:
-            w.writerow([u, "benigna", "chilenos" if u in chilenos else "tranco", fecha])
+            fuente = "chilenos" if u in chilenos else "hosting" if u in hosting else "tranco"
+            w.writerow([u, "benigna", fuente, fecha])
     print(f"-> {AQUI / 'dataset.csv'}")
 
 

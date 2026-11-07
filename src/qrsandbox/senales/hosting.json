@@ -1,0 +1,13 @@
+{
+ "_comentario": "Servicios donde cualquiera publica una página gratis, en minutos y sin comprar dominio, bajo un subdominio propio (usuario.plataforma). El phishing los usa mucho: la antigüedad del dominio y el certificado son de la plataforma, no del sitio, y no se puede poner toda la plataforma en una lista negra. Datos de desarrollo (OpenPhish 6-nov-2026): 155 de 300 URLs de phishing estaban en uno de estos servicios.",
+ "plataformas": [
+  "pages.dev", "workers.dev", "vercel.app", "netlify.app", "github.io", "gitlab.io",
+  "web.app", "firebaseapp.com", "glitch.me", "onrender.com", "herokuapp.com", "fly.dev",
+  "railway.app", "replit.app", "repl.co", "surge.sh", "r2.dev", "blogspot.com", "weebly.com",
+  "wixsite.com", "godaddysites.com", "framer.app", "framer.website", "webflow.io", "gitbook.io",
+  "000webhostapp.com", "ngrok-free.app", "ngrok.io", "trycloudflare.com", "square.site",
+  "mystrikingly.com", "jimdosite.com", "carrd.co", "notion.site", "tiiny.site", "hostingersite.com",
+  "yolasite.com", "webcindario.com", "azurewebsites.net", "appspot.com", "codesandbox.io",
+  "github.dev", "bubbleapps.io", "softr.app", "glide.page", "typedream.app", "my.canva.site"
+ ]
+}

@@ -46,6 +46,21 @@ def main():
         print(f"{m['metodo']:<40} P={m['precision']:.2f} R={m['recall']:.2f} F1={m['f1']:.2f} "
               f"FP={m['tasa_fp']:.2f} p50={m['latencia_ms_p50']} ms p95={m['latencia_ms_p95']} ms")
 
+    # Falsos positivos por fuente de benignas (p. ej. la señal de hosting gratuito solo puede
+    # equivocarse en "hosting").
+    por_fuente = []
+    for fuente in sorted({f["fuente"] for f in filas if f["etiqueta"] == "benigna"}):
+        grupo = [f for f in filas if f["etiqueta"] == "benigna" and f["fuente"] == fuente]
+        fila = {"fuente": fuente, "n": len(grupo)}
+        for m in ("A", "B", "C"):
+            fila[f"tasa_fp_{m}"] = round(sum(f[m] == "1" for f in grupo) / len(grupo), 3)
+        por_fuente.append(fila)
+        print(f"benignas {fuente:<9} n={fila['n']:<4} FP: A={fila['tasa_fp_A']} B={fila['tasa_fp_B']} C={fila['tasa_fp_C']}")
+    with (RESULTADOS / "exp1_fp_por_fuente.csv").open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(por_fuente[0]))
+        w.writeheader()
+        w.writerows(por_fuente)
+
     # Análisis cualitativo: qué tenían (y qué no) las maliciosas que se escaparon.
     fns = [f for f in filas if f["etiqueta"] == "maliciosa" and f["C"] == "0"]
     fps = [f for f in filas if f["etiqueta"] == "benigna" and f["C"] == "1"]

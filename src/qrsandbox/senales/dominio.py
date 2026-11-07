@@ -4,8 +4,10 @@ Todo es offline y determinista (sin red): se puede testear y explicar.
 """
 
 import ipaddress
+import itertools
 import json
 import os
+import re
 import unicodedata
 from dataclasses import dataclass
 from functools import cache
@@ -180,3 +182,52 @@ def cargar_rastreadores() -> frozenset[str]:
 def es_rastreador(p: PartesHost) -> bool:
     lista = cargar_rastreadores()
     return p.host in lista or p.registrable in lista
+
+
+# ------------------------------------------------------------------ hosting gratuito
+
+
+@cache
+def cargar_plataformas() -> tuple[str, ...]:
+    texto = resources.files("qrsandbox.senales").joinpath("hosting.json").read_text("utf-8")
+    return tuple(json.loads(texto)["plataformas"])
+
+
+def plataforma_gratuita(p: PartesHost) -> tuple[str, str] | None:
+    """(plataforma, nombre elegido por quien publicó) si el host está en un hosting gratuito.
+
+    Ej.: "sp30ct-zavur.pages.dev" -> ("pages.dev", "sp30ct-zavur"). La plataforma misma
+    ("pages.dev") no cuenta.
+    """
+    for plataforma in cargar_plataformas():
+        if p.host.endswith("." + plataforma):
+            return plataforma, p.host[: -len(plataforma) - 1].split(".")[-1]
+    return None
+
+
+def _cambios_letra_numero(token: str) -> int:
+    return sum(1 for a, b in itertools.pairwise(token) if a.isdigit() != b.isdigit())
+
+
+def motivos_nombre_generado(nombre: str) -> list[str]:
+    """Rasgos de un nombre generado automáticamente (páginas desechables).
+
+    Reglas diseñadas con datos de DESARROLLO (phishing de OpenPhish del 6-nov y 158 sitios
+    legítimos reales en estas plataformas): detectan el 69 % del phishing y 0 % de los
+    legítimos. Se evitaron a propósito rasgos comunes en sitios legítimos: un número dentro
+    de una palabra (cs231n, ml4a), el sufijo hexadecimal que Netlify pone por defecto
+    (celadon-chaja-e416dc) y los nombres descriptivos largos (full-stack-web-template).
+    """
+    tokens = [t for t in re.split(r"[-_]", nombre) if t]
+    motivos = []
+    if any(_cambios_letra_numero(t) >= 3 and not re.fullmatch(r"[0-9a-f]{6}", t) for t in tokens):
+        motivos.append("mezcla letras y números al azar")
+    if len(re.findall(r"\d", nombre)) >= 5 and "-" in nombre:
+        motivos.append("tiene muchos dígitos")
+    if re.search(r"\d{1,2}-\d{1,2}-(19|20)\d\d", nombre):
+        motivos.append("incluye una fecha")
+    if len(nombre) >= 26 and "-" not in nombre:
+        motivos.append("es una tira larga de letras sin separar")
+    if len(tokens) >= 5 and any(re.search(r"\d", t) for t in tokens):
+        motivos.append("encadena muchos fragmentos con números")
+    return motivos

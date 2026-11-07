@@ -18,6 +18,8 @@ export const EXPLICACIONES = {
   sin_https: "La conexión no va cifrada: lo que escribas podría ser visto o cambiado por otros en la red. Nunca escribas claves en un sitio así.",
   tld_riesgoso: "La terminación de la dirección (.xyz, .top, …) es barata y muy usada por estafadores. Por sí sola no prueba nada, pero suma.",
   acortador: "Es un enlace acortado: no se puede saber a dónde lleva sin abrirlo. Justamente por eso lo abrimos nosotros por ti.",
+  hosting_gratuito: "La página está en un servicio donde cualquiera puede crear un sitio gratis en minutos. Muchos sitios legítimos están ahí, pero también muchos fraudes: el candado y la antigüedad son del servicio, no de esta página.",
+  nombre_generado: "El nombre de la página parece hecho al azar por una máquina (letras y números mezclados, fechas, muchos dígitos). Los estafadores crean cientos de páginas así y las tiran cuando las bloquean.",
   puerto_no_estandar: "La dirección usa un «puerto» poco común (el número después de los dos puntos). Es raro en sitios normales.",
   muchos_subdominios: "Tiene muchas partes antes del dominio real, para que el comienzo parezca otro sitio.",
   palabras_clave: "Usa palabras como «verificar», «cuenta» o «login» en la dirección: típicas de mensajes que buscan apurarte.",

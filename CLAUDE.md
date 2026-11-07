@@ -479,6 +479,16 @@ Hoy (inicio): viernes 6-nov-2026. Entrega: jueves 19-nov-2026 08:00.
 - **(F7)** Medición agregada al Exp. 2 (pedida por la especificación): costo de la vista previa
   (`costo_frames.py`): re-codificación aislada mediana 14 ms/frame (6–32), 1,6 % de la duración,
   15–390 KB de imágenes por análisis.
+- **(F6+)** Señal de **hosting gratuito** (pedido del usuario tras el piloto del Exp. 1):
+  `hosting_gratuito` (+10) si el host está bajo una plataforma de `senales/hosting.json`
+  (pages.dev, vercel.app, github.io, blogspot…) y `nombre_generado` (+25) si el nombre elegido
+  parece automático (`dominio.motivos_nombre_generado`: ≥3 cambios letra↔número en un
+  fragmento salvo el hex de 6 de Netlify, ≥5 dígitos con guiones, fecha, tira ≥26 sin guiones,
+  ≥5 fragmentos con números). Juntas = 35 (sospechoso). **Diseñada solo con datos de
+  desarrollo**: OpenPhish del 6-nov (155/300 en hosting gratuito; detecta 69 %) y 158 sitios
+  legítimos reales (páginas oficiales de repos populares de GitHub, `benignas_hosting_desarrollo.txt`:
+  0 FP). La otra mitad (`benignas_hosting_prueba.txt`, 158) NO se miró y entra al conjunto
+  benigno del Exp. 1 (50 chilenos + 158 hosting + 92 Tranco); `analizar.py` reporta FP por fuente.
 - **(F1)** Terceros = dominio distinto al de la página actual, con aproximación "últimas 2
   etiquetas" (sin Public Suffix List). Simplificación documentada.
 - **(F1)** Capturas en memoria en la API (LRU de 50) y servidas en

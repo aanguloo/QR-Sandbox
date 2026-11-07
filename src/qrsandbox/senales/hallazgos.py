@@ -33,6 +33,8 @@ PESOS: dict[str, int] = {
     "sin_https": 15,
     "tld_riesgoso": 15,
     "acortador": 10,
+    "hosting_gratuito": 10,  # solo informa: también hay muchos sitios legítimos ahí
+    "nombre_generado": 25,  # nombre automático en hosting gratuito (+10 = 35: sospechoso)
     "puerto_no_estandar": 10,
     "muchos_subdominios": 10,
     "palabras_clave": 10,

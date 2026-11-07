@@ -168,7 +168,8 @@ entre 35 y 69 *sospechoso*, y bajo 35 *sin alertas*; nunca decimos "seguro".
 - **Señales estáticas**, sin abrir la URL: listas negras offline (OpenPhish y Phishing.Database
   con snapshots fechados), imitación de 66 marcas (homoglifos, sustituciones como `micr0soft`,
   typosquatting, nombre de la marca en un dominio ajeno), `@` que esconde el dominio real, IP
-  literal, terminaciones baratas, acortadores, rastreadores de IP, edad del dominio (RDAP, y el
+  literal, terminaciones baratas, acortadores, rastreadores de IP, hosting gratuito con nombre
+  generado al azar, edad del dominio (RDAP, y el
   whois de NIC Chile para `.cl`) y certificado TLS. Para leer el certificado nos conectamos al
   sitio del atacante con la misma política anti-SSRF del proxy.
 - **Señales dinámicas**: redirecciones, cambio de dominio, formularios de contraseña, marca
@@ -279,8 +280,8 @@ registro).
 > (`exp1_metricas.png`), la distribución de puntajes y el análisis de falsos negativos.
 
 **Diseño.** Unas 300 URLs maliciosas que aparecen **por primera vez** en el snapshot de
-OpenPhish de la fecha de prueba, y unas 300 benignas: 50 sitios chilenos comunes y dominios de
-Tranco [7] en los puestos 10.001 a 110.000. Comparamos cuatro métodos:
+OpenPhish de la fecha de prueba, y 300 benignas: 50 sitios chilenos comunes, 158 sitios
+legítimos en hosting gratuito y dominios de Tranco [7] en los puestos 10.001 a 110.000. Comparamos cuatro métodos:
 
 - **(A)** solo listas negras de días **anteriores**;
 - **(A\*)** la lista del mismo día, como cota optimista;
@@ -293,8 +294,20 @@ temporal** es clave: si la lista negra de (A) incluyera las URLs de prueba, su r
 
 **Piloto (solo para validar el instrumento).** Con 8 + 8 URLs, (B) y (C) detectaron 4 de 8 sin
 falsos positivos. Los falsos negativos fueron sitios en `*.pages.dev`, un hosting gratuito, con
-nombres aleatorios: un patrón que hoy no usamos como señal y que, para no sesgar el
-experimento, solo ajustaremos con datos de días anteriores al de prueba.
+nombres aleatorios.
+
+**Una señal nueva, diseñada sin mirar los datos de prueba.** Con los datos de desarrollo
+(el snapshot del 6-nov) vimos que 155 de 300 phishing estaban en hosting gratuito (Cloudflare
+Pages, Vercel, GitHub Pages, Blogspot…). Ahí la edad del dominio y el certificado son de la
+plataforma y no delatan nada. Agregamos dos señales: `hosting_gratuito` (+10, solo informa) y
+`nombre_generado` (+25), que reconoce nombres creados en masa (letras y números mezclados al
+azar, fechas, muchos dígitos). Para medir falsos positivos reunimos 316 sitios legítimos
+reales en esas plataformas (páginas oficiales de repositorios populares de GitHub) y los
+partimos al azar. Con la mitad de desarrollo, las reglas detectan el 69 % del phishing en
+hosting gratuito y **0 de 158** legítimos; descartamos a propósito rasgos frecuentes en
+sitios legítimos, como un número dentro de una palabra (`cs231n`) o el sufijo que Netlify
+pone por defecto. La otra mitad, que no miramos, forma parte del conjunto benigno de la
+prueba final, cuyos falsos positivos se reportan por fuente.
 
 ## 5. Aprendizajes y limitaciones
 
