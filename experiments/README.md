@@ -37,10 +37,12 @@ a `scripts/descarga_diaria.sh` y solo descarga si falta el snapshot del día. El
 `data/listas/descargas.log`. Para quitarla:
 `Unregister-ScheduledTask -TaskName "QR-Sandbox descarga diaria" -Confirm:$false`.
 
-**Estado (6-nov):** solo hay un piloto de 8 + 8 URLs (`results/exp1_piloto_*`). La corrida
-final necesita snapshots de **varios días**: hay que correr `make listas` a diario y luego
-`make exp1` (por ejemplo, el 14-nov). Con un solo día, (A) no tiene lista previa y su recall
-es 0 por construcción.
+**Resultado (corrida final del 16-nov, 300 + 300):** (A) lista negra de días previos: recall
+0,03; (A\*) mismo día: 1,00 (cota); (B) estático: P 0,99, R 0,70, FP 1 %; (C) estático +
+dinámico: P 0,96, R **0,79**, F1 0,87, FP 3 % (chilenos 4 %, hosting 4,4 %, Tranco 0 %), p50
+6,6 s. 185 de las 300 maliciosas ya mostraban la advertencia de Cloudflare al analizarlas; en
+las 115 que sí cargaron, (B) detecta 34 y (C) 60. Detalle en `docs/informe.md` §4.3. Registro
+de la corrida: `data/exp1_corrida.log`. El piloto de 8 + 8 está en `results/exp1_piloto_*`.
 Hallazgo del piloto: los falsos negativos fueron sitios en `*.pages.dev` (hosting gratuito)
 con nombres aleatorios. **Señal agregada con datos de desarrollo** (6-nov): `hosting_gratuito`
 (+10) y `nombre_generado` (+25). En el desarrollo, 155 de 300 phishing de OpenPhish estaban en

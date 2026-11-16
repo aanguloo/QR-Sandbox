@@ -3,8 +3,6 @@
 **André Angulo** · Seguridad Computacional, Pontificia Universidad Católica de Chile · noviembre de 2026
 Código: <https://github.com/aanguloo/QR-Sandbox>
 
-> **Borrador.** La sección 4.3 (Experimento 1) se completa con la corrida final del 14-nov.
-
 ## Resumen
 
 Los códigos QR esconden la dirección a la que llevan, y en el mundo físico basta pegar un
@@ -19,7 +17,9 @@ lugar lleva a otro destino se detecta como posible sticker, aunque el sitio fals
 En nuestros experimentos, con GPS de precisión normal (σ ≤ 20 m), el log detectó el 100 % de
 los stickers sin falsas alarmas. Frente a un atacante que ya ejecuta código dentro del sandbox,
 la configuración endurecida redujo de 9 a 1 los objetivos que logra (de 17 probados), mientras
-que con Docker por defecto logra 9.
+que con Docker por defecto logra 9. Con 300 URLs de phishing aparecidas el mismo día, una lista
+negra de los días previos detectó el 3 %, y nuestras señales estáticas y dinámicas el 79 %, con
+3 % de falsos positivos.
 
 ## 1. Qué hicimos
 
@@ -274,40 +274,79 @@ registro).
   con 2000), porque recalcula el árbol desde los datos crudos. Verificar la prueba en el
   cliente toma ~0,01 ms y la prueba ocupa 11 hashes (352 bytes) con 2000 entradas.
 
-### 4.3 Experimento 1: detección de phishing *(pendiente)*
+### 4.3 Experimento 1: detección de phishing
 
-> **[PENDIENTE: corrida final ~14-nov.]** Se reemplaza con la tabla de métricas, la Figura 5
-> (`exp1_metricas.png`), la distribución de puntajes y el análisis de falsos negativos.
+**Diseño.** 300 URLs de OpenPhish que aparecieron **por primera vez** el 16-nov (ninguna estaba
+en los 8 snapshots anteriores, con 2400 URLs) y 300 benignas: 50 sitios chilenos comunes, 158
+sitios legítimos en hosting gratuito y 92 dominios de Tranco [7] en los puestos 10.001 a
+110.000. Comparamos (A) listas negras de días **anteriores**, (A\*) la lista del mismo día como
+cota optimista, (B) heurísticas estáticas y (C) estático más dinámico en el sandbox con gVisor
+(1 análisis cada 2 s; 0 fallas). La **separación temporal** es clave: si la lista de (A)
+incluyera las URLs de prueba, su recall sería 100 % por construcción.
 
-**Diseño.** Unas 300 URLs maliciosas que aparecen **por primera vez** en el snapshot de
-OpenPhish de la fecha de prueba, y 300 benignas: 50 sitios chilenos comunes, 158 sitios
-legítimos en hosting gratuito y dominios de Tranco [7] en los puestos 10.001 a 110.000. Comparamos cuatro métodos:
+**Una señal diseñada sin mirar la prueba.** En el piloto (8 + 8 URLs) los falsos negativos
+fueron sitios en hosting gratuito con nombres aleatorios (`*.pages.dev`), donde la edad del
+dominio y el certificado son de la plataforma. Con los datos de desarrollo (6-nov: 155 de 300
+phishing en hosting gratuito) agregamos `hosting_gratuito` (+10, solo informa) y
+`nombre_generado` (+25: letras y números al azar, fechas, muchos dígitos). Partimos al azar
+316 sitios legítimos reales en esas plataformas: con la mitad de desarrollo, las reglas
+detectaron el 69 % del phishing en hosting gratuito y 0 de 158 legítimos; la otra mitad, sin
+mirar, es parte de las benignas de la prueba. Las señales no se cambiaron tras ver la prueba.
 
-- **(A)** solo listas negras de días **anteriores**;
-- **(A\*)** la lista del mismo día, como cota optimista;
-- **(B)** heurísticas estáticas;
-- **(C)** estático más dinámico en el sandbox.
+| Método | VP | FN | FP | Precisión | Recall | F1 | Tasa FP | Latencia p50 / p95 |
+|---|---|---|---|---|---|---|---|---|
+| (A) lista negra de días anteriores | 10 | 290 | 0 | 1,00 | **0,03** | 0,07 | 0,00 | — |
+| (A\*) lista del mismo día (cota) | 300 | 0 | 0 | 1,00 | 1,00 | 1,00 | 0,00 | — |
+| (B) heurísticas estáticas | 210 | 90 | 3 | 0,99 | 0,70 | 0,82 | 0,01 | 0,7 s / 1,9 s |
+| (C) estático + dinámico | 236 | 64 | 9 | 0,96 | **0,79** | **0,87** | 0,03 | 6,6 s / 16,6 s |
 
-Medimos precisión, recall, F1, tasa de falsos positivos y latencia p50/p95. La **separación
-temporal** es clave: si la lista negra de (A) incluyera las URLs de prueba, su recall sería
-100 % por construcción.
+![Figura 5. Métricas del Experimento 1 (300 maliciosas, 300 benignas).](../experiments/figures/exp1_metricas.png)
 
-**Piloto (solo para validar el instrumento).** Con 8 + 8 URLs, (B) y (C) detectaron 4 de 8 sin
-falsos positivos. Los falsos negativos fueron sitios en `*.pages.dev`, un hosting gratuito, con
-nombres aleatorios.
+**Qué muestran los números.**
 
-**Una señal nueva, diseñada sin mirar los datos de prueba.** Con los datos de desarrollo
-(el snapshot del 6-nov) vimos que 155 de 300 phishing estaban en hosting gratuito (Cloudflare
-Pages, Vercel, GitHub Pages, Blogspot…). Ahí la edad del dominio y el certificado son de la
-plataforma y no delatan nada. Agregamos dos señales: `hosting_gratuito` (+10, solo informa) y
-`nombre_generado` (+25), que reconoce nombres creados en masa (letras y números mezclados al
-azar, fechas, muchos dígitos). Para medir falsos positivos reunimos 316 sitios legítimos
-reales en esas plataformas (páginas oficiales de repositorios populares de GitHub) y los
-partimos al azar. Con la mitad de desarrollo, las reglas detectan el 69 % del phishing en
-hosting gratuito y **0 de 158** legítimos; descartamos a propósito rasgos frecuentes en
-sitios legítimos, como un número dentro de una palabra (`cs231n`) o el sufijo que Netlify
-pone por defecto. La otra mitad, que no miramos, forma parte del conjunto benigno de la
-prueba final, cuyos falsos positivos se reportan por fuente.
+- **Las listas negras llegan tarde.** Con la lista de los días anteriores, (A) detecta solo el
+  3 %. La misma lista un día después lo detecta todo: la diferencia entre (A) y (A\*) es
+  justamente el retraso que el proyecto busca cubrir.
+- **Las señales detectan el phishing nuevo.** (B) llega a 70 % y (C) a 79 %, con precisión
+  ≥ 0,96. Ningún sitio benigno quedó como `peligroso`.
+- **El sandbox aporta, sobre todo cuando la página se ve.** Al momento del análisis, **185 de
+  las 300** maliciosas ya mostraban la advertencia de Cloudflare ("Suspected Phishing/Malware"):
+  la plataforma las había bloqueado, y el sandbox vio esa advertencia y no el sitio falso. Ahí
+  (B) y (C) detectan lo mismo (176 de 185), casi siempre por el nombre generado en hosting
+  gratuito. En las **115 restantes**, cuya página sí cargó, (B) detecta 34 y (C) **60**: el
+  análisis dinámico casi duplica la detección. Las 26 que solo encontró (C) fueron por la marca
+  en el título de una página ajena (falsos "Official Notice from Facebook", Instagram,
+  Microsoft, Netflix, Amazon) o por un formulario de contraseña con marca.
+- **Dependencia de una señal.** 182 de los 236 aciertos de (C) incluyen `nombre_generado`, y
+  134 llegan exactamente al umbral (35) solo con hosting gratuito + nombre generado: la mayoría
+  de los aciertos tiene poco margen (Figura 6). La señal se diseñó con datos de desarrollo y se
+  sostuvo en la prueba, pero un atacante que elija nombres normales la evita.
+
+![Figura 6. Distribución de puntajes de (C); la línea marca el umbral de `sospechoso`.](../experiments/figures/exp1_puntajes.png)
+
+**Falsos positivos (9 de 300 en C).** Por fuente: chilenos 4 % (2 de 50), hosting gratuito
+4,4 % (7 de 158), Tranco 0 %. Revisados uno a uno:
+
+- `emol.com`: pide un permiso sensible, encadena redirecciones y tiene un formulario de
+  contraseña (50). `chilexpress.cl`: menciona otra marca junto a un formulario de contraseña (65).
+- Dos proyectos de Netlify con el nombre por defecto (`competent-engelbart-3915c0`): la
+  excepción para el sufijo hexadecimal de Netlify no cubre sufijos con muchos dígitos (es un
+  defecto de la regla encontrado en la prueba; no se corrigió para no ajustar con estos datos).
+- Páginas de GitHub que redirigen a otro dominio (`cloud-fs`, `fossasia`) o a `github.com/google`
+  (marca Google en `github.io`), una plantilla de "login" de demostración y un sitio que menciona
+  Google Classroom.
+
+**Falsos negativos (64 en C).** Todas cargaron (no hubo errores). La mayoría estaba en hosting
+gratuito con nombres normales (Vercel 11, Cloudflare Pages 6, Weebly 5, Blogspot 4), sin
+contraseña ni marca visible: solo sumaron `hosting_gratuito` (10) y a veces `sin_https`. Otras 8
+ya mostraban la advertencia de Cloudflare sin un nombre sospechoso. **Costo:** el análisis
+dinámico tarda ~6,6 s (p50) y ~17 s (p95), contra < 1 s del estático; por eso la app muestra la
+línea de tiempo en vivo.
+
+**Amenazas a la validez.** Un solo día de prueba y una sola fuente maliciosa (OpenPhish), con
+campañas repetidas (21 "Official Notice from Facebook"); las benignas no son una muestra de lo
+que escanea la gente; el bloqueo de Cloudflare depende de la hora del análisis; y la cota (A\*)
+es 100 % por construcción, porque las URLs maliciosas salen de esa misma lista.
 
 ## 5. Aprendizajes y limitaciones
 
@@ -340,6 +379,9 @@ prueba final, cuyos falsos positivos se reportan por fuente.
 - Las señales son públicas, así que un atacante puede intentar evitarlas.
 - El log prueba posesión de una clave, no la identidad legal del comercio.
 - En zonas densas con GPS impreciso hay falsas alertas.
+- La detección de phishing nuevo depende bastante de una sola señal (nombre generado en hosting
+  gratuito) y la mayoría de los aciertos queda cerca del umbral; un phishing con nombre normal
+  y sin marca visible pasa como `sin_alertas`.
 - El reconocimiento visual de logos quedó fuera de alcance: lo aproximamos con texto
   alternativo, nombres de archivo y favicon.
 
@@ -351,7 +393,9 @@ Mostramos que es posible analizar un QR sin que el teléfono toque el destino, c
 cuya contención medimos capa por capa. También mostramos que un registro público y
 verificable, al estilo de Certificate Transparency, permite detectar el ataque físico del
 sticker, que es invisible para las listas negras, con precisión casi perfecta mientras el GPS
-funcione razonablemente. Ambas piezas son explicables: el usuario ve qué hizo el enlace, por
+funcione razonablemente. Y frente al phishing recién creado, donde las listas negras de días
+previos detectaron el 3 %, las señales explicables llegaron al 79 %; el análisis en el sandbox
+casi duplicó la detección en las páginas que sí cargaron. Ambas piezas son explicables: el usuario ve qué hizo el enlace, por
 qué el veredicto es el que es y puede verificar el registro en su propio navegador.
 
 ## Referencias

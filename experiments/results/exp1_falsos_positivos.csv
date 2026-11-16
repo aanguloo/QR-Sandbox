@@ -1,0 +1,10 @@
+url,puntaje_C,razones_C,error_sandbox,titulo,url_final
+https://www.emol.com/,50,permiso_sensible;muchas_redirecciones;formulario_password,,Emol.com - El sitio de noticias online de Chile,https://www.emol.com/movil/
+https://www.chilexpress.cl/,65,password_con_marca_ajena;marca_en_pagina_ajena,,"Empresa de Courier Nacional e Internacional, encomiendas y envíos | Chilexpress",https://www.chilexpress.cl/
+https://cloud-fs.github.io/,35,sin_https;hosting_gratuito;cambio_de_dominio,,CloudDrive2 — All your clouds. One app. Every screen.,http://www.clouddrive2.com/en/
+https://competent-engelbart-3915c0.netlify.app/,35,nombre_generado;hosting_gratuito,,Trends Clothing Store,https://competent-engelbart-3915c0.netlify.app/
+https://fossasia.github.io/,35,sin_https;hosting_gratuito;cambio_de_dominio,,FOSSASIA | Asia's Open Technology Organization - Developing Open Source Software,http://fossasia.org/
+https://google.github.io/,55,marca_en_dominio_ajeno;hosting_gratuito;cambio_de_dominio,,Google · GitHub,https://github.com/google
+https://login-page-of.vercel.app/,35,formulario_password;hosting_gratuito;palabras_clave,,Beautiful glass login form - Bedimcode,https://login-page-of.vercel.app/
+https://shiori-v1.vercel.app/,40,marca_en_pagina_ajena;hosting_gratuito,,"AI Study Planner for Students — Shiori | Google Classroom Sync, Flashcards, GPA ",https://shiori-v1.vercel.app/
+https://velvety-bavarois-2b4545.netlify.app/,35,nombre_generado;hosting_gratuito,,盗墓笔记 · 纪年档案,https://velvety-bavarois-2b4545.netlify.app/

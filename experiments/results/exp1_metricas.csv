@@ -1,0 +1,5 @@
+metodo,vp,fn,fp,vn,precision,recall,f1,tasa_fp,latencia_ms_p50,latencia_ms_p95
+(A) solo listas negras,10,290,0,300,1.0,0.033,0.065,0.0,0,0
+(A*) lista del mismo día (optimista),300,0,0,300,1.0,1.0,1.0,0.0,0,0
+(B) heurísticas estáticas,210,90,3,297,0.986,0.7,0.819,0.01,734,1898
+(C) estático + dinámico,236,64,9,291,0.963,0.787,0.866,0.03,6588,16550

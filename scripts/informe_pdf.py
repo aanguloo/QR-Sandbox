@@ -32,6 +32,7 @@ th { background: #eee; }
 img { display: block; max-width: 100%; max-height: 8.8cm; margin: 6pt auto 2pt; break-inside: avoid; }
 p:has(> img) { text-align: center; font-size: 9pt; color: #333; break-inside: avoid; }
 img[src*="arquitectura"] { max-height: 12.5cm; }
+img[src*="exp1_"] { max-height: 6cm; }
 blockquote { border-left: 3px solid #c90; background: #fff8e6; margin: 8pt 0; padding: 4pt 8pt; }
 a { color: #1f4fd1; text-decoration: none; }
 """
