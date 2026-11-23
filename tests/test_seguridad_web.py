@@ -105,3 +105,20 @@ def test_cada_hallazgo_tiene_explicacion_para_no_expertos():
     bloque = js.split("export const EXPLICACIONES = {", 1)[1].split("};", 1)[0]
     explicados = set(re.findall(r"^\s+([a-z_]+):", bloque, re.MULTILINE))
     assert set(PESOS) <= explicados, f"sin explicación: {set(PESOS) - explicados}"
+
+
+def test_vista_en_vivo_no_filtra_frames_por_lasteventid():
+    """Regresión (20-nov): los frames del SSE no llevan `id:` y `lastEventId` conserva el del
+    evento anterior, así que el filtro de repetidos los descartaba todos."""
+    js = (WEB / "static" / "js" / "analisis.js").read_text()
+    assert re.search(r'tipo === "frame" \|\| e\.lastEventId === "" \? null', js)
+    # y en el servidor los frames siguen sin id (si algún día lo llevan, revisar el cliente)
+    main = (WEB.parent / "src" / "qrsandbox" / "api" / "main.py").read_text()
+    assert 'yield f"event: frame\\ndata:' in main
+
+
+def test_veredicto_no_pasa_null_a_replacechildren():
+    """Regresión (20-nov): replaceChildren(null) muestra el texto «null» (el() sí lo salta)."""
+    js = (WEB / "static" / "js" / "analisis.js").read_text()
+    bloque = js[js.index("function mostrarVeredicto"):js.index("async function mostrarLog")]
+    assert not re.search(r"^\s*: null,\s*$", bloque, re.M)

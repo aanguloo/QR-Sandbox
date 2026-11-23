@@ -146,7 +146,8 @@ function mostrarVeredicto(v) {
           EXPLICACIONES[r.codigo]
             ? el("details", { class: "explicacion" }, el("summary", {}, "¿Qué significa?"), el("p", {}, EXPLICACIONES[r.codigo]))
             : null)))
-      : null,
+      // "" y no null: replaceChildren (a diferencia de el()) convertiría null en el texto "null".
+      : "",
     el("div", { class: "que-hacer" }, el("strong", {}, "Qué hacer ahora"),
       el("ul", {}, (QUE_HACER[v.estado] || []).map((t) => el("li", {}, t)))),
     el("p", { class: "pequeno" }, e.texto, " El puntaje (0 a 100) es la suma de los puntos de cada razón: 70 o más es peligroso, 35 a 69 sospechoso."),
@@ -294,7 +295,10 @@ function escucharSse() {
   const fuente = new EventSource(`/analisis/${id}/eventos`);
   for (const tipo of ["evento", "foto", "estatico", "frame", "fin", "fallo"]) {
     fuente.addEventListener(tipo, (e) => {
-      despachar(tipo, JSON.parse(e.data), e.lastEventId === "" ? null : Number(e.lastEventId));
+      // Los frames no llevan `id:` y lastEventId conserva el del evento ANTERIOR: si se usara,
+      // el filtro de repetidos descartaría todos los frames (la vista en vivo quedaba vacía).
+      const seq = tipo === "frame" || e.lastEventId === "" ? null : Number(e.lastEventId);
+      despachar(tipo, JSON.parse(e.data), seq);
       if (terminado) fuente.close();
     });
   }
