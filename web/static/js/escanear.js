@@ -15,6 +15,32 @@ function decodificar(ancho, alto) {
   return codigo && codigo.data ? codigo.data : null;
 }
 
+// Los QR exportados con bordes grises entre módulos confunden al umbral local de jsQR:
+// pasarlos a blanco y negro puro elimina esas líneas.
+function decodificarBinarizada(ancho, alto) {
+  const imagen = ctx.getImageData(0, 0, ancho, alto);
+  const d = imagen.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const valor = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2] >= 128 ? 255 : 0;
+    d[i] = d[i + 1] = d[i + 2] = valor;
+  }
+  const codigo = window.jsQR(d, ancho, alto, { inversionAttempts: "attemptBoth" });
+  return codigo && codigo.data ? codigo.data : null;
+}
+
+// jsQR ignora el canal alfa: un PNG transparente se leería como negro. Se compone sobre blanco
+// (módulos oscuros) y, si no aparece, sobre negro (módulos claros).
+function decodificarSobreFondos(bitmap, ancho, alto) {
+  for (const fondo of ["#fff", "#000"]) {
+    ctx.fillStyle = fondo;
+    ctx.fillRect(0, 0, ancho, alto);
+    ctx.drawImage(bitmap, 0, 0, ancho, alto);
+    const texto = decodificar(ancho, alto) || decodificarBinarizada(ancho, alto);
+    if (texto) return texto;
+  }
+  return null;
+}
+
 async function iniciarCamara() {
   if (!navigator.mediaDevices?.getUserMedia) {
     mostrarMensaje($("#mensaje-escaneo"), "La cámara necesita HTTPS. Usa «Subir una imagen» o abre el sitio con https://.", "alerta");
@@ -68,9 +94,8 @@ async function leerArchivo(archivo) {
     const escala = Math.min(1, MAX_LADO / Math.max(bitmap.width, bitmap.height));
     lienzo.width = Math.round(bitmap.width * escala);
     lienzo.height = Math.round(bitmap.height * escala);
-    ctx.drawImage(bitmap, 0, 0, lienzo.width, lienzo.height);
+    const texto = decodificarSobreFondos(bitmap, lienzo.width, lienzo.height);
     bitmap.close();
-    const texto = decodificar(lienzo.width, lienzo.height);
     if (texto) mostrarDestino(texto);
     else mostrarMensaje($("#mensaje-escaneo"), "No encontramos un código QR en la imagen. Prueba con una más nítida o recortada.", "alerta");
   } catch {

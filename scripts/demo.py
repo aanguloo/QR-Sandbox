@@ -43,10 +43,17 @@ def asegurar_codigo() -> str:
 def url_del_tunel(timeout_s: int = 90) -> str:
     limite = time.time() + timeout_s
     while time.time() < limite:
-        logs = subprocess.run([*COMPOSE, "logs", "tunel"], check=False, cwd=RAIZ,
-                              capture_output=True, text=True).stdout
-        if m := URL_TUNEL.search(logs):
-            return m.group(0)
+        # Un contenedor reiniciado conserva sus logs y cada arranque crea otra URL: se lee solo
+        # desde el arranque actual para no publicar un QR que apunte a un túnel ya cerrado.
+        contenedor = subprocess.run([*COMPOSE, "ps", "-q", "tunel"], check=False, cwd=RAIZ,
+                                    capture_output=True, text=True).stdout.strip()
+        inicio = subprocess.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", contenedor],
+                                check=False, capture_output=True, text=True).stdout.strip()
+        if inicio:
+            logs = subprocess.run([*COMPOSE, "logs", "--since", inicio, "tunel"], check=False,
+                                  cwd=RAIZ, capture_output=True, text=True).stdout
+            if m := URL_TUNEL.search(logs):
+                return m.group(0)
         time.sleep(2)
     raise SystemExit("El túnel no entregó una URL. Revisa: docker compose -f docker-compose.yml "
                      "-f docker-compose.demo.yml logs tunel")
